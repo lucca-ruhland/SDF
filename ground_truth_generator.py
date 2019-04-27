@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatch
 from matplotlib.animation import FuncAnimation
 
 class Aircraft:
@@ -69,13 +70,22 @@ class Aircraft:
         self.norm = self.get_normal(t)
 
 class AnimatedPlot(object):
-    def __init__(self, ax, air):
-        self.ax = ax
+    def __init__(self, ax1, ax2, ax3, ax4, air):
+        self.ax1 = ax1
+        self.ax2 = ax2
+        self.ax3 = ax3
+        self.ax4 = ax4
         self.air = air
-        self.ax.set_xlim(-12000, 12000)
-        self.ax.set_ylim(-12000, 12000)
-        self.ax.set_title("aircraft trajectory")
-        self.line, = ax.plot([], [], 'bo')
+        self.ax1.set_xlim(-12000, 12000)
+        self.ax1.set_ylim(-12000, 12000)
+        self.ax1.set_xlabel("X in m")
+        self.ax1.set_ylabel("Y in m")
+        self.ax1.set_title("aircraft trajectory")
+        self.line, = ax1.plot([], [], 'bo')
+
+        self.ax2.set_title("aircraft velocity")
+        self.ax3.set_title("aircraft acceleration")
+
     def init(self):
         self.line.set_data([], [])
         return self.line,
@@ -88,19 +98,26 @@ class AnimatedPlot(object):
         x = self.air.position[0]
         y = self.air.position[1]
         self.line.set_data(x, y)
-        Q = plt.quiver(x, y, self.air.get_acceleration(self.air.t)[0], self.air.get_acceleration(self.air.t)[1], units='width')
-        qk = plt.quiverkey(Q, 0.9, 0.9, 2, r'$2 \frac{m}{s}$', labelpos='E',
-                           coordinates='figure')
-        return self.line, Q, qk,
+        Q1 = self.ax2.quiver(*self.air.get_position(self.air.t), self.air.get_velocity(self.air.t), units='width')
+        qk1 = self.ax2.quiverkey(Q1, 0.9, 0.9, 2, r'$v: \frac{m}{s}$', labelpos='E',
+                                 coordinates='figure')
+        Q2 = self.ax3.quiver(*self.air.get_position(self.air.t), self.air.get_acceleration(self.air.t), units='width')
+        qk2 = self.ax3.quiverkey(Q1, 0.9, 0.9, 2, r'$v: \frac{m}{s^2}$', labelpos='E',
+                                 coordinates='figure')
+
+        return self.line, Q1, Q2
 
 def main():
     # period T is 400/3 * Pi = 418.879 ...
     T = 419
     air = Aircraft(300, 9, 0)
-    fig, ax = plt.subplots()
-    ap = AnimatedPlot(ax, air)
+    # fig, ax = plt.subplots()
+    # ax2 = fig.add_subplot(222)
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(nrows=2, ncols=2)
+    ap = AnimatedPlot(ax1, ax2, ax3, ax4, air)
     anim = FuncAnimation(fig, ap, frames=T, init_func=ap.init,
-                         interval=100, blit=True)
+                         interval=10, blit=True)
+    plt.tight_layout()
     plt.show()
 
 if __name__ == "__main__":
