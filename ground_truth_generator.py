@@ -47,13 +47,11 @@ class Aircraft:
         return r_ii
 
     def get_tangential(self, t):
-        t = np.zeros((2, 1))
+        tang = np.zeros((2, 1))
         r_i = self.get_velocity(t)
-        print(r_i.shape)
-        t[0] = 1/(np.linalg.norm(r_i)) * r_i[0]
-        t[1] = 1/(np.linalg.norm(r_i)) * r_i[1]
-        print(t.shape)
-        return t
+        tang[0] = 1/(np.linalg.norm(r_i)) * r_i[0]
+        tang[1] = 1/(np.linalg.norm(r_i)) * r_i[1]
+        return tang
 
     def get_normal(self, t):
         n = np.zeros((2, 1))
@@ -67,7 +65,7 @@ class Aircraft:
         self.position = self.get_position(t)
         self.velocity = self.get_velocity(t)
         self.acceleration = self.get_acceleration(t)
-        #self.tang = self.get_tangential(t)
+        self.tang = self.get_tangential(t)
         self.norm = self.get_normal(t)
 
 class AnimatedPlot(object):
@@ -76,9 +74,8 @@ class AnimatedPlot(object):
         self.air = air
         self.ax.set_xlim(-12000, 12000)
         self.ax.set_ylim(-12000, 12000)
-        self.ax.set_title("aircraft tracerory")
+        self.ax.set_title("aircraft trajectory")
         self.line, = ax.plot([], [], 'bo')
-
     def init(self):
         self.line.set_data([], [])
         return self.line,
@@ -91,14 +88,19 @@ class AnimatedPlot(object):
         x = self.air.position[0]
         y = self.air.position[1]
         self.line.set_data(x, y)
-        return self.line,
+        Q = plt.quiver(x, y, self.air.get_acceleration(self.air.t)[0], self.air.get_acceleration(self.air.t)[1], units='width')
+        qk = plt.quiverkey(Q, 0.9, 0.9, 2, r'$2 \frac{m}{s}$', labelpos='E',
+                           coordinates='figure')
+        return self.line, Q, qk,
 
 def main():
+    # period T is 400/3 * Pi = 418.879 ...
+    T = 419
     air = Aircraft(300, 9, 0)
     fig, ax = plt.subplots()
     ap = AnimatedPlot(ax, air)
-    anim = FuncAnimation(fig, ap, frames=10000, init_func=ap.init,
-                         interval=10, blit=True)
+    anim = FuncAnimation(fig, ap, frames=T, init_func=ap.init,
+                         interval=100, blit=True)
     plt.show()
 
 if __name__ == "__main__":
