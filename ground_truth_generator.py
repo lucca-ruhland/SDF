@@ -5,19 +5,15 @@ from matplotlib.animation import FuncAnimation
 
 class Aircraft:
 
-    v = 0
-    q = 0
-    t = 0
-    position = np.zeros((2, 1))
-    velocity = np.zeros((2, 1))
-    acceleration = np.zeros((2, 1))
-    tang = np.zeros((2, 1))
-    norm = np.zeros((2, 1))
-
     def __init__(self, v, q, t):
         self.v = v
         self.q = q
         self.t = t
+        self.position = np.zeros((2, 1))
+        self.velocity = np.zeros((2, 1))
+        self.acceleration = np.zeros((2, 1))
+        self.tang = np.zeros((2, 1))
+        self. norm = np.zeros((2, 1))
 
     def get_w_a(self, t):
         A = (self.v ** 2) / self.q
@@ -85,6 +81,7 @@ class AnimatedPlot(object):
 
         self.ax2.set_title("aircraft velocity")
         self.ax3.set_title("aircraft acceleration")
+        self.ax4.set_title("r''(t) * t(t) & r''(t) * n(t)")
 
     def init(self):
         self.line.set_data([], [])
@@ -98,21 +95,48 @@ class AnimatedPlot(object):
         x = self.air.position[0]
         y = self.air.position[1]
         self.line.set_data(x, y)
-        Q1 = self.ax2.quiver(*self.air.get_position(self.air.t), self.air.get_velocity(self.air.t), units='width')
-        qk1 = self.ax2.quiverkey(Q1, 0.9, 0.9, 2, r'$v: \frac{m}{s}$', labelpos='E',
-                                 coordinates='figure')
-        Q2 = self.ax3.quiver(*self.air.get_position(self.air.t), self.air.get_acceleration(self.air.t), units='width')
-        qk2 = self.ax3.quiverkey(Q1, 0.9, 0.9, 2, r'$v: \frac{m}{s^2}$', labelpos='E',
+
+        #plot vectors as quivers
+
+        #plot velocity:
+        Q1 = self.ax1.quiver(self.air.position[0], self.air.position[1], self.air.velocity[0], self.air.velocity[1], units='xy', scale=0.1)
+        qk1 = self.ax1.quiverkey(Q1, 0.9, 0.9, 2, r'$v: \frac{m}{s}$', labelpos='E',
                                  coordinates='figure')
 
-        return self.line, Q1, Q2
+        Q1_2 = self.ax2.quiver(np.array((0)), np.array((0)), self.air.velocity[0], self.air.velocity[1], units='xy', scale=10000)
+        qk1_2 = self.ax2.quiverkey(Q1, 0.9, 0.9, 2, r'$v: \frac{m}{s}$', labelpos='E',
+                                 coordinates='figure')
+        #plot acceleration:
+        Q2 = self.ax1.quiver(self.air.position[0], self.air.position[1], self.air.acceleration[0], self.air.acceleration[1], units='xy', scale=0.0025)
+        qk2 = self.ax1.quiverkey(Q1, 0.9, 0.9, 2, r'$q: \frac{m}{s^2}$', labelpos='E',
+                                 coordinates='figure')
+
+        Q2_2 = self.ax3.quiver(np.array((0)), np.array((0)), self.air.acceleration[0], self.air.acceleration[1], units='xy', scale=250)
+        qk2_2 = self.ax3.quiverkey(Q1, 0.9, 0.9, 2, r'$q: \frac{m}{s^2}$', labelpos='E',
+                                 coordinates='figure')
+
+        temp_1 = self.air.acceleration * self.air.tang
+
+        #plot r''(t) * t(t):
+        Q3 = self.ax4.quiver(np.array((0)), np.array((0)), temp_1[0], temp_1[1], units='xy', scale=250)
+        qk3 = self.ax4.quiverkey(Q3, 0.9, 0.9, 2, r'$r''(t) * t(t)$', labelpos='E',
+                                 coordinates='figure')
+
+
+        temp_2 = self.air.acceleration * self.air.norm
+
+        #plot r''(t) * norm(t):
+
+        Q4 = self.ax4.quiver(np.array((0)), np.array((0)), temp_2[0], temp_2[1], units='xy', scale=250)
+        qk4 = self.ax4.quiverkey(Q3, 0.9, 0.9, 2, r'$r''(t) * n(t)$', labelpos='E',
+                                   coordinates='figure')
+
+        return self.line, Q1, Q1_2, Q2, Q2_2, Q3, Q4
 
 def main():
     # period T is 400/3 * Pi = 418.879 ...
     T = 419
     air = Aircraft(300, 9, 0)
-    # fig, ax = plt.subplots()
-    # ax2 = fig.add_subplot(222)
     fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(nrows=2, ncols=2)
     ap = AnimatedPlot(ax1, ax2, ax3, ax4, air)
     anim = FuncAnimation(fig, ap, frames=T, init_func=ap.init,
