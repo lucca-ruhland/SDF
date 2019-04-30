@@ -156,10 +156,6 @@ def update(frame):
     return ln, ln2, ln3, ln4, ln5,ln6, Q1, Q2,
 
 
-def main():
-  pass
-
-
 if __name__ == "__main__":
     T = 419
     air = Aircraft(300, 9, 0)
@@ -194,4 +190,3 @@ if __name__ == "__main__":
                         init_func=init, interval=10,  blit=True, repeat=False)
     plt.tight_layout()
     plt.show()
-    #main()
