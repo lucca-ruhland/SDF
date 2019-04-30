@@ -17,7 +17,6 @@ class Aircraft:
         self.tang = np.zeros((2, 1))
         self.norm = np.zeros((2, 1))
 
-
     def get_w_a(self, t):
         A = (self.v ** 2) / self.q
         w = self.q / (2 * self.v)
@@ -68,6 +67,7 @@ class Aircraft:
         self.tang = self.get_tangential(t)
         self.norm = self.get_normal(t)
 
+
 def init():
     #set up ax
     ax.set_xlim(-12000, 12000)
@@ -95,7 +95,7 @@ def init():
 
     # set up ax4
     ax4.set_xlim(-10, 430)
-    ax4.set_ylim(-2, 12)
+    ax4.set_ylim(-10, 10)
     ax4.set_title("r''(t)t(t)")
     ax4.set_xlabel("r''(t)t(t) in m/s²")
     ax4.set_ylabel("t in meter")
@@ -103,7 +103,7 @@ def init():
 
     # set up ax5
     ax5.set_xlim(-10, 430)
-    ax5.set_ylim(-2, 12)
+    ax5.set_ylim(-8, 8)
     ax5.set_title("r''(t)n(t)")
     ax5.set_xlabel("r''(t)n(t) in m/s²")
     ax5.set_ylabel("t in meter")
@@ -111,7 +111,9 @@ def init():
 
     return ln, ln2, ln3, ln4, ln5, ln6
 
+
 def update(frame):
+
     # update values
     air.update_stats(frame)
     # appending data for object trace
@@ -133,10 +135,12 @@ def update(frame):
     ln4.set_data(time, q)
 
     # set up line for r''(t)t(t)
-    r_t.append(np.dot(air.acceleration,air.tang))
+    r_t.append(np.matmul(air.acceleration.T, air.tang))
     ln5.set_data(time, r_t)
 
     # set up line for r''(t)n(t)
+    r_n.append(np.matmul(air.acceleration.T, air.norm))
+    ln6.set_data(time, r_n)
 
     # plot vectors as quiver
     # plot tangential vector
@@ -149,10 +153,12 @@ def update(frame):
                          scale=0.0005, color='y')
     qk2 = ax.quiverkey(Q1, 0.9, 0.9, 2, r'$normal vector$', labelpos='E',
                              coordinates='figure')
-    return ln, ln2, ln3, ln4, ln5, Q1, Q2,
+    return ln, ln2, ln3, ln4, ln5,ln6, Q1, Q2,
+
 
 def main():
   pass
+
 
 if __name__ == "__main__":
     T = 419
@@ -161,7 +167,6 @@ if __name__ == "__main__":
 
     font = {'size': 9}
     matplotlib.rc('font', **font)
-    #fig, ax = plt.subplots()
     fig = figure(num=0, figsize=(12, 8))  # , dpi = 100)
     fig.suptitle("ground truth generator", fontsize=12)
     ax = plt.subplot2grid((3, 3), (0, 0), colspan=2)
