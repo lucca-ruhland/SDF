@@ -1,9 +1,7 @@
-import numpy as np
-import matplotlib.pyplot as plt
 from matplotlib.pylab import *
-import matplotlib.patches as mpatch
-from mpl_toolkits.axes_grid1 import host_subplot
 from matplotlib.animation import FuncAnimation
+import sensor_simulator as sen
+
 
 class Aircraft:
 
@@ -69,7 +67,7 @@ class Aircraft:
 
 
 def init():
-    #set up ax
+    # set up ax
     ax.set_xlim(-12000, 12000)
     ax.set_ylim(-12000, 12000)
     ax.set_title("aircraft trajectory")
@@ -77,7 +75,7 @@ def init():
     ax.set_ylabel("x in meter")
     ax.grid(True)
 
-    #set up ax2
+    # set up ax2
     ax2.set_xlim(-10, 430)
     ax2.set_ylim(0, 400)
     ax2.set_title("aircraft velocity")
@@ -109,7 +107,14 @@ def init():
     ax5.set_ylabel("t in meter")
     ax5.grid(True)
 
-    return ln, ln2, ln3, ln4, ln5, ln6
+    #set up ax6
+    ax6.set_title("sensor measurements")
+    ax6.grid(True)
+    ax6.set_xlim(-12000, 12000)
+    ax6.set_ylim(-12000, 12000)
+
+
+    return ln, ln2, ln3, ln4, ln5, ln6, ln7, ln8, ln9
 
 
 def update(frame):
@@ -142,6 +147,32 @@ def update(frame):
     r_n.append(np.matmul(air.acceleration.T, air.norm))
     ln6.set_data(time, r_n)
 
+    # update sensor data
+    sensor.update_stats(frame)
+
+    # set up sensor measurements
+    # cartesian
+    if frame % sensor.delta_t == 0:
+        cx.append(sensor.z_c[0])
+        cy.append(sensor.z_c[1])
+        ln9.set_data(cx, cy)
+
+    # polar
+    if frame % sensor.delta_t == 0:
+        z_r = sensor.z_p[0]
+        z_f = sensor.z_p[1]
+        r = sensor.pos
+        vec = np.array((np.cos(z_f), np.sin(z_f)))
+        vec = vec.reshape((2, 1))
+        z = z_r * vec + r
+        px.append(z[0])
+        py.append(z[1])
+        ln7.set_data(px, py)
+
+
+    # set up sensor position
+    ln8.set_data(sensor.pos[0], sensor.pos[1])
+
     # plot vectors as quiver
     # plot tangential vector
     Q1 = ax.quiver(air.position[0], air.position[1], air.tang[0], air.tang[1], units='xy',
@@ -153,14 +184,19 @@ def update(frame):
                          scale=0.0005, color='y')
     qk2 = ax.quiverkey(Q1, 0.9, 0.9, 2, r'$normal vector$', labelpos='E',
                              coordinates='figure')
-    return ln, ln2, ln3, ln4, ln5,ln6, Q1, Q2,
+    return ln, ln2, ln3, ln4, ln5, ln6, ln7, ln8, ln9, Q1, Q2,
 
 
 if __name__ == "__main__":
     T = 419
+    # set up objects
     air = Aircraft(300, 9, 0)
+    sensor_position = np.array((1000, 2500))
+    sensor_position = sensor_position.reshape((2, 1))
+    # o.2° is 0.00349066 radiant
+    sensor = sen.Sensor(50, 20,0.00349066, 5, sensor_position, air)
 
-
+    # set up figure and subplots
     font = {'size': 9}
     matplotlib.rc('font', **font)
     fig = figure(num=0, figsize=(12, 8))  # , dpi = 100)
@@ -170,23 +206,43 @@ if __name__ == "__main__":
     ax3 = plt.subplot2grid((3, 3), (1, 2), rowspan=2)
     ax4 = plt.subplot2grid((3, 3), (2, 0))
     ax5 = plt.subplot2grid((3, 3), (2, 1))
+    ax6 = plt.subplot2grid((3, 3), (0, 2))
 
-    #set up arrays to save data of plots
+    # set up arrays to save data of plots
     xdata, ydata = [], []
     v = []
     q = []
     r_t = []
     r_n = []
     time = []
+    # for cartesian measurements
+    cx, cy = [], []
+    # for polar measurements
+    px, py = [], []
+
     # set up lines to plot
+    # object trace
     ln, = ax.plot([], [])
+    # moving object
     ln2, = ax.plot([], [], 'ro')
+    # velocity
     ln3, = ax2.plot([], [])
+    # acceleration
     ln4, = ax3.plot([], [])
+    # vector products with t(t) & n(t)
     ln5, = ax4.plot([], [])
     ln6, = ax5.plot([], [])
-    #plot animation
+    # sensor measurements polar
+    ln7, = ax6.plot([], [], 'bo', label="polar measurement")
+    # sensor position
+    ln8, = ax6.plot([], [], 'yo', label="sensor position")
+    # cartesian
+    ln9, = ax6.plot([], [], 'ro', label="cartesian measurement")
+
+
+    # plot animation
     ani = FuncAnimation(fig, update, frames=T,
                         init_func=init, interval=10,  blit=True, repeat=False)
+    ax6.legend()
     plt.tight_layout()
     plt.show()
