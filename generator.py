@@ -1,6 +1,9 @@
+from typing import List, Any
+
 from matplotlib.pylab import *
 from matplotlib.animation import FuncAnimation
 import sensor_simulator as sen
+#1matplotlib.use('GTKAgg')
 
 
 class Aircraft:
@@ -40,7 +43,7 @@ class Aircraft:
         r_ii = np.zeros((2, 1))
         w, A = self.get_w_a(t)
         r_ii[0] = -self.q * np.sin(w * t) / 4
-        r_ii[0] = self.q * np.sin(2 * w * t)
+        r_ii[1] = self.q * np.sin(2 * w * t)
         return r_ii
 
     def get_tangential(self, t):
@@ -101,20 +104,22 @@ def init():
 
     # set up ax5
     ax5.set_xlim(-10, 430)
-    ax5.set_ylim(-8, 8)
+    ax5.set_ylim(-10, 10)
     ax5.set_title("r''(t)n(t)")
     ax5.set_xlabel("r''(t)n(t) in m/s²")
     ax5.set_ylabel("t in meter")
     ax5.grid(True)
 
     #set up ax6
-    ax6.set_title("sensor measurements")
+    ax6.set_title("sensor polar measurements")
+    ax6.set_xlabel("time in seconds")
+    ax6.set_ylabel("range in meter")
     ax6.grid(True)
-    ax6.set_xlim(-12000, 12000)
-    ax6.set_ylim(-12000, 12000)
+    ax6.set_xlim(-24000, 24000)
+    ax6.set_ylim(-24000, 24000)
 
 
-    return ln, ln2, ln3, ln4, ln5, ln6, ln7, ln8, ln9
+    return ln, ln2, ln3, ln4, ln5, ln6, ln7, ln8, ln9, ln10
 
 
 def update(frame):
@@ -157,17 +162,25 @@ def update(frame):
         cy.append(sensor.z_c[1])
         ln9.set_data(cx, cy)
 
+    # def polar vars
+    px = 0
+    py = 0
     # polar
     if frame % sensor.delta_t == 0:
+        sens_time.append(frame)
+
         z_r = sensor.z_p[0]
         z_f = sensor.z_p[1]
         r = sensor.pos
         vec = np.array((np.cos(z_f), np.sin(z_f)))
         vec = vec.reshape((2, 1))
-        z = z_r * vec + r
-        px.append(z[0])
-        py.append(z[1])
-        ln7.set_data(px, py)
+        polar = z_r * vec + r
+        px = polar[0]
+        py = polar[0]
+        polarx.append(polar[0])
+        polary.append(polar[1])
+        #ln7.set_data(polarx, polary)
+        #ln10.set_data(sens_time, zs)
 
 
     # set up sensor position
@@ -184,17 +197,23 @@ def update(frame):
                          scale=0.0005, color='y')
     qk2 = ax.quiverkey(Q1, 0.9, 0.9, 2, r'$normal vector$', labelpos='E',
                              coordinates='figure')
-    return ln, ln2, ln3, ln4, ln5, ln6, ln7, ln8, ln9, Q1, Q2,
+
+    # plot polar measurements
+    Q3 = ax6.quiver(sensor.pos[0], sensor.pos[1], polarx, polary, units='xy',
+                   scale=1, color='y')
+    qk3 = ax6.quiverkey(Q1, 0.9, 0.9, 2, 'polar vector', labelpos='E',
+                       coordinates='figure')
+    return ln, ln2, ln3, ln4, ln5, ln6, ln7, ln8, ln9, ln10, Q1, Q2, Q3,
 
 
 if __name__ == "__main__":
     T = 419
     # set up objects
     air = Aircraft(300, 9, 0)
-    sensor_position = np.array((1000, 2500))
+    sensor_position = np.array((8000, 6500))
     sensor_position = sensor_position.reshape((2, 1))
     # o.2° is 0.00349066 radiant
-    sensor = sen.Sensor(50, 20,0.00349066, 5, sensor_position, air)
+    sensor = sen.Sensor(50, 20, 0.00349066, 5, sensor_position, air)
 
     # set up figure and subplots
     font = {'size': 9}
@@ -215,10 +234,12 @@ if __name__ == "__main__":
     r_t = []
     r_n = []
     time = []
+    # time for sensor as depends on rate
+    sens_time = []
     # for cartesian measurements
     cx, cy = [], []
     # for polar measurements
-    px, py = [], []
+    polarx, polary = [], []
 
     # set up lines to plot
     # object trace
@@ -232,17 +253,21 @@ if __name__ == "__main__":
     # vector products with t(t) & n(t)
     ln5, = ax4.plot([], [])
     ln6, = ax5.plot([], [])
-    # sensor measurements polar
-    ln7, = ax6.plot([], [], 'bo', label="polar measurement")
+    # sensor measurements polar range
+    ln7, = ax6.plot([], [], 'bo', label="range measurement")
     # sensor position
-    ln8, = ax6.plot([], [], 'yo', label="sensor position")
+    ln8, = ax.plot([], [], 'yo', label="sensor position")
     # cartesian
-    ln9, = ax6.plot([], [], 'ro', label="cartesian measurement")
+    ln9, = ax.plot([], [], 'ro', label="cartesian measurement")
+    # sensor measurements polar winkel
+    ln10, = ax6.plot([], [], 'ro', label="azimuth")
 
 
     # plot animation
     ani = FuncAnimation(fig, update, frames=T,
-                        init_func=init, interval=10,  blit=True, repeat=False)
+                        init_func=init, interval=50,  blit=True, repeat=False)
+
+    ax.legend()
     ax6.legend()
     plt.tight_layout()
     plt.show()
