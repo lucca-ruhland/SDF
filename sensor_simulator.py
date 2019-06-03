@@ -13,60 +13,60 @@ class Sensor:
         self.pos = pos
         # objects
         self.air = air
-        # variables
-        self.x = np.zeros(6)
+        # simulated measurements
         self.z_c = np.zeros(2)
-        self.z_p = np.zeros(2)
+        self.z_r = np.zeros(2)
+        self.z_az = np.zeros(2)
+        # target components
+        self.x_pos = np.zeros(2)
+        self.x_v = np.zeros(2)
+        self.x_q = np.zeros(2)
 
     def update_x(self, t):
+        """Updates for given time instant t all aircraft components"""
         self.air.update_stats(t)
-        # print("position:\n", self.air.position)
-        # print(self.air.position.shape)
-        # print("velocity:\n", self.air.velocity)
-        # print(self.air.velocity.shape)
-        # print("acceleration:\n", self.air.acceleration)
-        # print(self.air.acceleration.shape)
-        self.x = np.transpose(self.air.position)
-        self.x = np.hstack((self.x, np.transpose(self.air.velocity)))
-        self.x = np.hstack((self.x, np.transpose(self.air.acceleration)))
-        self.x = np.transpose(self.x)
-        # print("x:\n", self.x)
-        # print(self.x.shape)
-        return self.x
+        self.x_pos = self.air.position
+        self.x_v = self.air.velocity
+        self.x_q = self.air.acceleration
 
     def get_u(self, sg1, sg2):
+        """returns Matrix for normal distribution"""
         u = np.array([sg1 * np.random.normal(0, 1), sg2 * np.random.normal(0, 1)])
         return u
 
     def cartesian(self, t):
-        self.x = self.update_x(t)
+        """Returns the cartesian measurements of the aircraft for time instanct t"""
+        self.update_x(t)
         u = self.get_u(self.sigma_c, self.sigma_c)
-        pos = self.x[0:2]
-        z = pos + u
-
+        z = self.x_pos + u
         # test prints
         # print("product u; sigma * normrnd(0,1):\n", u)
         # print("sum: H*x + sigma*normrnd(0,1):\n", z)
-
         return z
 
     def range(self, t):
-        z = np.zeros((2, 1))
-        self.x = self.update_x(t)
-        zx = np.sqrt((self.x[0:1] - self.pos[0])**2 + (self.x[1:2] - self.pos[1])**2)
-        zy = np.arctan((self.x[1:2] - self.pos[1]) / (self.x[0:1] - self.pos[0]))
-        u = self.get_u(self.sigma_r, self.sigma_f)
-        # print("z before:\n", z)
-        # print("u:\n", u)
-        z = np.array([zx, zy])
+        """returns the range between sensor and aircraft for time instant t"""
+        self.update_x(t)
+        u = self.get_u(self.sigma_r, self.sigma_f)[0]
+        z = np.array([np.sqrt((self.x_pos[0] - self.pos[0])**2 + (self.x_pos[1] - self.pos[1])**2)])
         z = z + u
-        # print("z + u:\n", z)
+        return z
+
+    def azimuth(self, t):
+        """returns the azimuth of the aircraft towards the sensor for time instant t"""
+        self.update_x(t)
+        u = self.get_u(self.sigma_r, self.sigma_f)[1]
+        z = np.array([np.arctan2((self.x_pos[1] - self.pos[1]), (self.x_pos[0] - self.pos[0]))])
+        z = z + u
         return z
 
     def update_stats(self, t):
+        """Updates all measurements of sensor for given time instant t"""
+        self.update_x(t)
         self.z_c = self.cartesian(t)
-        self.z_p = self.range(t)
-        self.x = self.update_x(t)
+        self.z_r = self.range(t)
+        self.z_az = self.azimuth(t)
+
 
 
 def main():
