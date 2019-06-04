@@ -4,19 +4,21 @@ from aircraft import Aircraft
 import numpy as np
 
 class kalman:
-    def __init__(self, aircraft, sensor, sigma_c, sigma, *argv):
+    def __init__(self, aircraft, sigma, *argv):
         """Initialize local variables and measurement data for filter"""
         # initialize objects
         self.air = aircraft
-        self.sen = sensor
+        # self.sen = sensor
 
-        self.delta_t = sensor.delta_t
-        self.sigma_c = sigma_c
+        # self.delta_t = sensor.delta_t
+        # self.sigma_c = sigma_c
+        self.delta_t = 5
         self.sigma = sigma
+        self.sensors = argv
 
         # init local vars
         self.x = np.zeros((4, 1))
-        self.R = self.sigma * np.eye(2)
+        # self.R = self.sigma * np.eye(2)
         self.z = np.zeros((2, 1))
         self.v = np.zeros((2, 1))
         self.W = np.zeros((4, 2))
@@ -30,33 +32,54 @@ class kalman:
                            0.5 * self.delta_t**3, 0, self.delta_t**2, 0,
                            0, 0.5 * self.delta_t**3, 0, self.delta_t**2])
         self.D.shape = (4, 4)
+        self.D = self.sigma**2 * self.D
+        print("D:\n", self.D)
 
         self.H = np.array([1, 0, 0, 0,
                            0, 1, 0, 0])
         self.H = self.H.reshape(2, 4)
         self.S = np.zeros((2, 2))
 
+        self.R = np.zeros((2, 2))
+        for arg in argv:
+            if isinstance(arg, Sensor):
+                self.R = self.R + np.linalg.inv(arg.sigma_c**2 * np.eye(2))
+        self.R = np.linalg.inv(self.R)
+        print("R^-1:", self.R)
+
 
     def prediction(self, t):
         """Returns a prediction based on a dynamic model of sensor measurements"""
-        self.sen.update_stats(t-1)
-        self.x = np.array([self.sen.z_c[0], self.sen.z_c[1], self.sen.x_v[0], self.sen.x_v[1]]).reshape(4, 1)
-        self.x = np.matmul(self.F, self.x)
-        self.P = np.matmul(np.matmul(self.F, self.P), self.F.T) + self.D
+        self.air.update_stats(t)
+        self.x = np.array([self.z[0], self.z[1], self.air.velocity[0], self.air.velocity[1]]).reshape(4, 1)
+        self.x = np.dot(self.F, self.x)
+        self.P = np.dot(np.dot(self.F, self.P), self.F.T) + self.D
 
     def filtering(self, t):
         """Returns a filtered dynamic model"""
-        self.sen.update_stats(t)
-        self.z = self.sen.z_c.reshape(2, 1)
-        self.v = self.z - np.matmul(self.H, self.x)
+        self.fusion(t)
+        self.v = self.z - np.dot(self.H, self.x)
 
-        self.S = np.matmul(np.matmul(self.H, self.P), self.H.T) + self.R
-        self.W = np.matmul(np.matmul(self.P, self.H.T), np.linalg.inv(self.S))
-        self.x = self.x + np.matmul(self.W, self.v)
-        self.P = self.P - np.matmul(np.matmul(self.W, self.S), self.W.T)
+        self.S = np.dot(np.dot(self.H, self.P), self.H.T) + self.R
+        self.W = np.dot(np.dot(self.P, self.H.T), np.linalg.inv(self.S))
+        self.x = self.x + np.dot(self.W, self.v)
+        self.P = self.P - np.dot(np.dot(self.W, self.S), self.W.T)
+
+    def fusion(self, t):
+        self.z = np.zeros((2, 1))
+        for arg in self.sensors:
+            if isinstance(arg, Sensor):
+                _r = arg.sigma_c**2 * np.eye(2)
+                arg.update_stats(t)
+                _z = np.array([arg.z_c[0], arg.z_c[1]]).reshape(2, 1)
+                self.z = self.z + np.dot(np.linalg.inv(_r), _z)
+        self.z = np.matmul(self.R, self.z)
+        print("fusion:\n", self.z)
+
 
     def calc(self, t):
         self.prediction(t)
+        self.fusion(t)
         self.filtering(t)
 
 
@@ -64,16 +87,17 @@ if __name__ == "__main__":
     # run tests for kalman filter
     # init objects needed for kalman filter
     air = Aircraft(300, 9, 0)
-    sensor_position = np.array((-5000, 0))
-    sensor_position = sensor_position.reshape((2, 1))
-    sensor = Sensor(50, 20, 0.00349066, 5, sensor_position, air)
-    kalman_filter = kalman(air, sensor, sensor.sigma_c, 5)
+    sensor_position = np.array((-8000, 4000)).reshape((2, 1))
+    sensor1 = Sensor(50, 20, 0.00349066, 5, sensor_position, air)
+    sensor_position2 = np.array((0, 0)).reshape((2, 1))
+    sensor2 = Sensor(50, 20, 0.00349066, 5, sensor_position2, air)
+    kalman_filter = kalman(air, 50, 5, sensor1, sensor2)
 
-
-    for i in range(1, 421, 5):
+    kalman_filter.fusion(200)
+    print(kalman_filter.z)
+    for i in range(1, 100):
         kalman_filter.calc(i)
-        print("i:\n", i)
-        print("x:", kalman_filter.x)
+        print(kalman_filter.x)
 
 
 

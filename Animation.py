@@ -100,7 +100,7 @@ class Animation(object):
         self.ax6.set_ylim(-24000, 24000)
 
         # add kalman object
-        self.kalman_filter = kf.kalman(air, sensor, 50, 5)
+        self.kalman_filter = kf.kalman(air, 5, sensor, sensor2)
 
         # set up data for lines
         # self.t = np.linspace(0, 420, 420)
@@ -197,10 +197,11 @@ if __name__ == "__main__":
     T = 420
     # set up objects
     air = airc.Aircraft(300, 9, 0)
-    sensor_position = np.array((5000, -1500))
-    sensor_position = sensor_position.reshape((2, 1))
+    sensor_position = np.array((5000, -1500)).reshape((2, 1))
+    sensor_position2 = np.array((-1200, 4000)).reshape((2, 1))
     # o.2 grad is 0.00349066 radiant
     sensor = sen.Sensor(50, 20, 0.00349066, 5, sensor_position, air)
+    sensor2 = sen.Sensor(50, 20, 0.00349066, 5, sensor_position2, air)
 
     # set up figure and subplots
     font = {'size': 9}
