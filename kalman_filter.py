@@ -17,67 +17,68 @@ class kalman:
         self.sensors = argv
 
         # init local vars
+        # state vector
         self.x = np.zeros((4, 1))
         # self.R = self.sigma * np.eye(2)
         self.z = np.zeros((2, 1))
-        self.v = np.zeros((2, 1))
-        self.W = np.zeros((4, 2))
         # Covariance P of pdf
         self.P = np.zeros((4, 4))
-        self.F = np.array([1, 0, self.delta_t, 0, 0, 1, 0, self.delta_t, 0, 0, 1, 0, 0, 0, 0, 1])
-        self.F.shape = (4, 4)
 
-        self.D = np.array([0.25 * self.delta_t**4, 0, 0.5 * self.delta_t**3, 0,
-                           0, 0.25*self.delta_t**4, 0, 0.5 * self.delta_t**3,
-                           0.5 * self.delta_t**3, 0, self.delta_t**2, 0,
-                           0, 0.5 * self.delta_t**3, 0, self.delta_t**2])
-        self.D.shape = (4, 4)
-        self.D = self.sigma**2 * self.D
-        print("D:\n", self.D)
-
-        self.H = np.array([1, 0, 0, 0,
-                           0, 1, 0, 0])
-        self.H = self.H.reshape(2, 4)
-        self.S = np.zeros((2, 2))
-
-        self.R = np.zeros((2, 2))
-        for arg in argv:
+    def get_covariance_r(self):
+        R = np.zeros((2, 2))
+        for arg in self.sensors:
             if isinstance(arg, Sensor):
-                self.R = self.R + np.linalg.inv(arg.sigma_c**2 * np.eye(2))
-        self.R = np.linalg.inv(self.R)
-        print("R^-1:", self.R)
+                R = R + np.linalg.inv(arg.sigma_c ** 2 * np.eye(2))
+        return np.linalg.inv(R)
 
+    def get_h(self):
+        return np.array([1, 0, 0, 0, 0, 1, 0, 0]).reshape(2, 4)
+
+    def get_covariance_d(self):
+        D = np.array([0.25 * self.delta_t ** 4, 0, 0.5 * self.delta_t ** 3, 0,
+                      0, 0.25 * self.delta_t ** 4, 0, 0.5 * self.delta_t ** 3,
+                      0.5 * self.delta_t ** 3, 0, self.delta_t ** 2, 0,
+                      0, 0.5 * self.delta_t ** 3, 0, self.delta_t ** 2]).reshape((4, 4))
+        return self.sigma ** 2 * D
+
+    def get_dynamics_f(self):
+        return np.array([1, 0, self.delta_t, 0, 0, 1, 0, self.delta_t, 0, 0, 1, 0, 0, 0, 0, 1]).reshape((4, 4))
 
     def prediction(self, t):
         """Returns a prediction based on a dynamic model of sensor measurements"""
         self.air.update_stats(t)
         self.x = np.array([self.z[0], self.z[1], self.air.velocity[0], self.air.velocity[1]]).reshape(4, 1)
-        self.x = np.dot(self.F, self.x)
-        self.P = np.dot(np.dot(self.F, self.P), self.F.T) + self.D
+        F = self.get_dynamics_f()
+        D = self.get_covariance_d()
+        self.x = np.dot(F, self.x)
+        self.P = np.dot(np.dot(F, self.P), F.T) + D
 
     def filtering(self, t):
         """Returns a filtered dynamic model"""
         self.fusion(t)
-        self.v = self.z - np.dot(self.H, self.x)
+        H = self.get_h()
+        R = self.get_covariance_r()
+        v = self.z - np.dot(H, self.x)
 
-        self.S = np.dot(np.dot(self.H, self.P), self.H.T) + self.R
-        self.W = np.dot(np.dot(self.P, self.H.T), np.linalg.inv(self.S))
-        self.x = self.x + np.dot(self.W, self.v)
-        self.P = self.P - np.dot(np.dot(self.W, self.S), self.W.T)
+        S = np.dot(np.dot(H, self.P), H.T) + R
+        W = np.dot(np.dot(self.P, H.T), np.linalg.inv(S))
+        self.x = self.x + np.dot(W, v)
+        self.P = self.P - np.dot(np.dot(W, S), W.T)
 
     def fusion(self, t):
         self.z = np.zeros((2, 1))
+        R = self.get_covariance_r()
         for arg in self.sensors:
             if isinstance(arg, Sensor):
                 _r = arg.sigma_c**2 * np.eye(2)
                 arg.update_stats(t)
                 _z = np.array([arg.z_c[0], arg.z_c[1]]).reshape(2, 1)
                 self.z = self.z + np.dot(np.linalg.inv(_r), _z)
-        self.z = np.matmul(self.R, self.z)
+        self.z = np.matmul(R, self.z)
         print("fusion:\n", self.z)
 
 
-    def calc(self, t):
+    def update_cartesian(self, t):
         self.prediction(t)
         self.fusion(t)
         self.filtering(t)
@@ -96,7 +97,7 @@ if __name__ == "__main__":
     kalman_filter.fusion(200)
     print(kalman_filter.z)
     for i in range(1, 100):
-        kalman_filter.calc(i)
+        kalman_filter.update_cartesian(i)
         print(kalman_filter.x)
 
 
