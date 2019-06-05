@@ -126,7 +126,7 @@ class Animation(object):
                 self.cartesian_y[i] = self.sensor.cartesian(i)[1]
                 self.polar_x[i] = self.sensor.range(i) * np.cos(self.sensor.azimuth(i)) + self.sensor.pos[0]
                 self.polar_y[i] = self.sensor.range(i) * np.sin(self.sensor.azimuth(i)) + self.sensor.pos[1]
-                self.kalman_filter.calc(i)
+                self.kalman_filter.update_cartesian(i)
                 self.prediction_x[i] = self.kalman_filter.x[0]
                 self.prediction_y[i] = self.kalman_filter.x[1]
             else:
@@ -143,7 +143,7 @@ class Animation(object):
 
     def init_plot(self):
         """Setting all initial values for the data plots"""
-        lines = [self.ln, self.ln2, self.ln3, self.ln4, self.ln5, self.ln6, self.ln7, self.ln8, self.ln9]
+        lines = [self.ln, self.ln2, self.ln3, self.ln4, self.ln5, self.ln6, self.ln7, self.ln8, self.ln9, self.ln10]
         for l in lines:
             l.set_data([], [])
         # set sensor position
@@ -188,7 +188,7 @@ class Animation(object):
         # plot polar measurements
         q_polar = ax.quiver(self.sensor.pos[0], self.sensor.pos[1], self.polar_x[i] - self.sensor.pos[0], self.polar_y[i]- self.sensor.pos[1], pivot='tail',
                              color='green', angles='xy', units='xy', scale=1, scale_units='xy', width=90)
-        artists = [self.ln, self.ln2, self.ln3, self.ln4, self.ln5, self.ln6, self.ln7, self.ln9, q_norm, q_tang, q_polar]
+        artists = [self.ln, self.ln2, self.ln3, self.ln4, self.ln5, self.ln6, self.ln7, self.ln9, self.ln10, q_norm, q_tang, q_polar]
         return artists
 
 
