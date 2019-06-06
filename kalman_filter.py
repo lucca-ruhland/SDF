@@ -8,15 +8,9 @@ class kalman:
         """Initialize local variables and measurement data for filter"""
         # initialize objects
         self.air = aircraft
-        # self.sen = sensor
-
-        # self.delta_t = sensor.delta_t
-        # self.sigma_c = sigma_c
+        # init sensors
         self.delta_t = 5
         self.sigma = sigma
-        # temporarily hard coded sigma values --> to do: read from sensors.
-        # self.sigma_r = 50
-        # self.sigma_f = 0.00349066
         # save all sensors
         self.sensors = argv
 
@@ -24,10 +18,12 @@ class kalman:
         # state vector
         # self.x = np.zeros((4, 1))
         self.x = self.init_state_vecor(0)
-        # self.R = self.sigma * np.eye(2)
         self.z = np.zeros((2, 1))
+        self.z_polar = np.zeros((2, 1))
         # Covariance P of pdf
         self.P = np.zeros((4, 4))
+        # covaricance R
+        self.R = np.zeros((2, 2))
 
     def get_covariance_r(self):
         """Harmonic mean of measurement covariance"""
@@ -41,10 +37,10 @@ class kalman:
     def get_covariance_r_polar(self):
         """Harmonic mean of measurement covariance"""
         """Returns numpy array of dimension 2x2"""
-        R = np.zeros((2, 1))
+        R = np.zeros((2, 2))
         for arg in self.sensors:
             if isinstance(arg, Sensor):
-                R = R + inv(np.diag((arg.sigma_r, arg.sigma_c)))
+                R = R + inv(np.diag((arg.sigma_r**2, arg.sigma_f**2)))
         return inv(R)
 
     def get_h(self):
@@ -82,12 +78,12 @@ class kalman:
     def filtering(self, t):
         """Returns a filtered dynamic model"""
         """Returns two numpy arrays of dimension 4x1 (matrix x) and 4x4 (matrix P)"""
-        self.fusion(t)
         H = self.get_h()
-        R = self.get_covariance_r()
+        R = self.R
         v = self.z - np.dot(H, self.x)
 
         S = np.dot(np.dot(H, self.P), H.T) + R
+        S = S.astype(float) # to fix inv(S) for polar measurements
         W = np.dot(np.dot(self.P, H.T), inv(S))
         x = self.x + np.dot(W, v)
         P = self.P - np.dot(np.dot(W, S), W.T)
@@ -100,8 +96,8 @@ class kalman:
         R = self.get_covariance_r()
         for arg in self.sensors:
             if isinstance(arg, Sensor):
-                _r = arg.sigma_c**2 * np.eye(2)
                 arg.update_stats(t)
+                _r = arg.sigma_c**2 * np.eye(2)
                 _z = np.array([arg.z_c[0], arg.z_c[1]]).reshape(2, 1)
                 z = z + np.dot(inv(_r), _z)
         z = np.matmul(R, z)
@@ -116,18 +112,26 @@ class kalman:
         R = self.get_covariance_r_polar()
         for arg in self.sensors:
             if isinstance(arg, Sensor):
-                _r = np.diag((arg.sigma_r, arg.sigma_f))
                 arg.update_stats(t)
+                _r = np.diag((arg.sigma_r**2, arg.sigma_f**2))
                 _z = np.array([arg.z_r, arg.z_az]).reshape((2, 1))
                 z = z + np.dot(inv(_r), _z)
-        z = np.dot(R, z)
-        print("Fusion polar:\n", z)
+        z = np.matmul(R, z)
         return z
 
     def polar_to_cartesian(self, z_polar):
+        """Convert polar measurements to cartesian"""
+        """Convert polar covariance to cartesian"""
+        """Returns two numpy arrays of dimesnion 2x1 (z) and 2x2 (covariance)"""
         r = z_polar[0]
         f = z_polar[1]
-        return r * np.array([np.cos(f), np.sin(f)]).reshape((2, 1))
+        z = r * np.array([np.cos(f), np.sin(f)]).reshape((2, 1))
+        D = np.array([np.cos(f), -np.sin(f), np.sin(f), np.cos(f)]).reshape((2, 2))
+        S = np.diag((1, r))
+        R = self.get_covariance_r_polar()
+        T = np.dot(D, S)
+        covariance = np.dot(np.dot(T, R), T.T)
+        return z, covariance
 
     def update_cartesian(self, t):
         self.x, self.P = self.prediction(t)
@@ -136,27 +140,32 @@ class kalman:
 
     def update_polar(self, t):
         self.x, self.P = self.prediction(t)
-        self.z = self.fusion(t)
-        self.z = self.polar_to_cartesian(self.z)
+        self.z = self.fusion_polar(t)
+        print("measuremetn z before converting:\n", self.z)
+        self.z, self.R = self.polar_to_cartesian(self.z)
+        print("measurement z AFTER converting:\n", self.z)
+        #print("R:\n", self.R)
         self.x, self.P = self.filtering(t)
+        print("filtered prediction x:\n", self.x)
 
 
 if __name__ == "__main__":
     # run tests for kalman filter
     # init objects needed for kalman filter
     air = Aircraft(300, 9, 0)
-    sensor_position = np.array((-8000, 4000)).reshape((2, 1))
+    sensor_position = np.array((-8000, -4000)).reshape((2, 1))
     sensor1 = Sensor(50, 20, 0.00349066, 5, sensor_position, air)
-    sensor_position2 = np.array((0, 0)).reshape((2, 1))
+    sensor_position2 = np.array((0, -12000)).reshape((2, 1))
     sensor2 = Sensor(50, 20, 0.00349066, 5, sensor_position2, air)
-    kalman_filter = kalman(air, 50, 5, sensor1, sensor2)
+    sensor_position3 = np.array((12000, 8000)).reshape((2, 1))
+    sensor3 = Sensor(50, 20, 0.00349066, 5, sensor_position3, air)
+    sensor_position4 = np.array((-6000, 3000)).reshape((2, 1))
+    sensor4 = Sensor(50, 20, 0.00349066, 5, sensor_position4, air)
+    kalman_filter = kalman(air, 50, 5, sensor1, sensor2, sensor3, sensor4)
 
-    print(kalman_filter.z)
+    # print(kalman_filter.z)
     for i in range(0, 100):
         kalman_filter.update_polar(i)
-        print("filtered prediction x:\n")
-        print(kalman_filter.x)
-
 
 
 
