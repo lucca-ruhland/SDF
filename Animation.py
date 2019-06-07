@@ -180,7 +180,7 @@ class Animation(object):
         self.ln7.set_data(self.polar_x[:i], self.polar_y[:i])
 
         # kalman
-        self.ln10.set_data(self.prediction_x[i-25:i], self.prediction_y[i-25:i])
+        self.ln10.set_data(self.prediction_x[i-10:i], self.prediction_y[i-10:i])
 
         # plot quiver
         q_tang = self.ax.quiver(x, y, self.air.tang[0], self.air.tang[1], pivot='tail', color='black', width=0.004, angles='xy', scale=25)
