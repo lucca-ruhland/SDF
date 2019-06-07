@@ -126,7 +126,7 @@ class Animation(object):
                 self.cartesian_y[i] = self.sensor.cartesian(i)[1]
                 self.polar_x[i] = self.sensor.range(i) * np.cos(self.sensor.azimuth(i)) + self.sensor.pos[0]
                 self.polar_y[i] = self.sensor.range(i) * np.sin(self.sensor.azimuth(i)) + self.sensor.pos[1]
-                self.kalman_filter.update_cartesian(i)
+                self.kalman_filter.update_polar(i)
                 self.prediction_x[i] = self.kalman_filter.x[0]
                 self.prediction_y[i] = self.kalman_filter.x[1]
             else:

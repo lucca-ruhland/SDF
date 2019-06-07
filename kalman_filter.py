@@ -92,7 +92,7 @@ class kalman:
         """Returns a filtered dynamic model"""
         """Returns two numpy arrays of dimension 4x1 (matrix x) and 4x4 (matrix P)"""
         H = self.get_h()
-        R = self.R
+        R = self.get_covariance_r()
         v = self.z - np.dot(H, self.x)
         print("innovation v:\n", v)
 
@@ -121,15 +121,16 @@ class kalman:
     def fusion_polar(self, t):
         """Combine measurements of all sensors into a single measurement"""
         """Used for measurements of sensors using range and azimuth"""
-        """Returns a numpy array with dimension 2x1"""
+        """Returns two numpy array with dimension 2x1 (z) and 2x2 (covariance R)"""
         z = np.zeros((2, 1))
         R = np.zeros((2, 2))
         for arg in self.sensors:
             if isinstance(arg, Sensor):
                 arg.update_stats(t)
                 _z = np.array([arg.z_r, arg.z_az]).reshape((2, 1))
+                print("partial measurement z BEFORE FUSION:\n", _z)
                 _r = self.get_covariance_polar_to_cartesian(_z)
-                _r = _r.astype(float) # to make inversion possible
+                _r = _r.astype(float)  # to make inversion possible
                 R = R + inv(_r)
                 z = z + np.dot(inv(_r), _z)
         R = inv(R)
@@ -161,7 +162,7 @@ if __name__ == "__main__":
     sensor3 = Sensor(50, 20, 0.00349066, 5, sensor_position3, air)
     sensor_position4 = np.array((-6000, 3000)).reshape((2, 1))
     sensor4 = Sensor(50, 20, 0.00349066, 5, sensor_position4, air)
-    kalman_filter = kalman(air, 50, 5, sensor1)
+    kalman_filter = kalman(air, 50, 5, sensor1, sensor2, sensor3, sensor4)
 
     # print(kalman_filter.z)
     for i in range(0, 420, 5):
