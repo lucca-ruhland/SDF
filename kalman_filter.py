@@ -130,9 +130,8 @@ class kalman:
                 # z in polar to calculate covariance r
                 _z = np.array([arg.z_r, arg.z_az]).reshape((2, 1))
                 _r = self.get_covariance_polar_to_cartesian(_z)
-                # transform z into cartesian
-                #_z  = arg.z_r * np.array([np.cos(arg.z_az), np.sin(arg.z_az)]).reshape((2, 1))
-                _z = np.array([arg.z_c[0], arg.z_c[1]]).reshape((2, 1))
+                # transform z into cartesian and add sensor position to get total and not relative coordinates
+                _z = arg.z_r * np.array([np.cos(arg.z_az), np.sin(arg.z_az)]).reshape((2, 1)) + arg.pos
                 _r = _r.astype(float)  # to make inversion possible
                 R = R + inv(_r)
                 z = z + np.dot(inv(_r), _z)

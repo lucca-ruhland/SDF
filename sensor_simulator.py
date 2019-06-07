@@ -78,12 +78,17 @@ def main():
     sensor_pos[1] = 0
     # create sensor object for test
     sensor = Sensor(50, 20, 0.2, 5, sensor_pos, aircraft)
-    # test
-    sensor.update_x(42)
-    sensor.cartesian(42)
+
     for i in range(10):
-        sensor.cartesian(i)
-    sensor.range(42)
+        sensor.update_stats(i)
+        obj_pos = np.array([sensor.z_c]).reshape((2, 1))
+        r = sensor.z_r
+        az = sensor.z_az
+        z = r * np.array([np.cos(az), np.sin(az)]).reshape((2, 1))
+        print("object position: \n", obj_pos)
+        print("recalculated position:\n", z)
+        dif = obj_pos - z
+        print("Differences:\n", dif)
 
 if __name__ == "__main__":
     main()
