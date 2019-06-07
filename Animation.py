@@ -8,7 +8,7 @@ import kalman_filter as kf
 
 class Animation(object):
 
-    def __init__(self, ax, ax2, ax3, ax4, ax5, ax6, air, sensor):
+    def __init__(self, ax, ax2, ax3, ax4, ax5, ax6, air, sensor, *args):
         """Setting up all local variables and calculate plot data"""
         # set up objects
         self.ax = ax
@@ -19,6 +19,13 @@ class Animation(object):
         self.ax6 = ax6
         self.air = air
         self.sensor = sensor
+
+        # variable number of sensors
+        self.sensors = args
+        self.sen_num = 0
+        for arg in args:
+            if isinstance(arg, sen.Sensor):
+                self.sen_num += 1
 
         # set up axis and lines
         # set up ax
@@ -150,6 +157,12 @@ class Animation(object):
         # set sensor position
         self.ax.plot(self.sensor.pos[0], self.sensor.pos[1], 'ro')
         self.ax6.plot(self.sensor.pos[0], self.sensor.pos[1], 'ro')
+
+        # set up sensor position for variable num of sensors
+        for arg in self.sensors:
+            if isinstance(arg, sen.Sensor):
+                self.ax.plot(arg.pos[0], arg.pos[1], 'ro')
+
         return lines
 
     def __call__(self, i):
@@ -188,8 +201,16 @@ class Animation(object):
         q_norm = self.ax.quiver(x, y, self.air.norm[0], self.air.norm[1], pivot='tail', color='black', width=0.004, scale=25)
         # plot polar measurements
         q_polar = ax.quiver(self.sensor.pos[0], self.sensor.pos[1], self.polar_x[i] - self.sensor.pos[0], self.polar_y[i]- self.sensor.pos[1], pivot='tail',
-                             color='green', angles='xy', units='xy', scale=1, scale_units='xy', width=90)
-        artists = [self.ln, self.ln2, self.ln3, self.ln4, self.ln5, self.ln6, self.ln7, self.ln9, self.ln10, q_norm, q_tang, q_polar]
+                             color='green', angles='xy', units='xy', scale=1, scale_units='xy', width=70)
+
+        artists = [self.ln, self.ln2, self.ln3, self.ln4, self.ln5, self.ln6, self.ln7, self.ln9, self.ln10, q_norm,
+                   q_tang, q_polar]
+
+        # plot quivers for each sensor
+        for arg in self.sensors:
+            if isinstance(arg, sen.Sensor):
+                artists.append(ax.quiver(arg.pos[0], arg.pos[1], self.polar_x[i] - arg.pos[0], self.polar_y[i] - arg.pos[1], pivot='tail', color='green', angles='xy', units='xy', scale=1, scale_units='xy', width=70))
+
         return artists
 
 
@@ -221,7 +242,7 @@ if __name__ == "__main__":
     ax6 = plt.subplot2grid((3, 3), (0, 2))
 
     # plot animation
-    ani = Animation(ax, ax2, ax3, ax4, ax5, ax6, air, sensor)
+    ani = Animation(ax, ax2, ax3, ax4, ax5, ax6, air, sensor, sensor2, sensor3, sensor4)
     animation = FuncAnimation(fig, ani, frames=T, init_func=ani.init_plot, interval=50,  blit=True, repeat=True)
 
     # ax.legend()
