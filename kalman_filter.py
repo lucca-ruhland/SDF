@@ -127,9 +127,11 @@ class kalman:
         for arg in self.sensors:
             if isinstance(arg, Sensor):
                 arg.update_stats(t)
-                _z = np.array([arg.z_r, arg.z_az]).reshape((2, 1))
+                # _z = np.array([arg.z_r, arg.z_az]).reshape((2, 1))
+                _z  = arg.z_r * np.array([np.cos(arg.z_az), np.sin(arg.z_az)]).reshape((2, 1))
                 print("partial measurement z BEFORE FUSION:\n", _z)
-                _r = self.get_covariance_polar_to_cartesian(_z)
+                # _r = self.get_covariance_polar_to_cartesian(_z)
+                _r = self.get_covariance_r()
                 _r = _r.astype(float)  # to make inversion possible
                 R = R + inv(_r)
                 z = z + np.dot(inv(_r), _z)

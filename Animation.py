@@ -100,7 +100,7 @@ class Animation(object):
         self.ax6.set_ylim(-24000, 24000)
 
         # add kalman object
-        self.kalman_filter = kf.kalman(air, 5, sensor, sensor2)
+        self.kalman_filter = kf.kalman(air, 5, sensor, sensor2, sensor3, sensor4)
 
         # set up data for lines
         # self.t = np.linspace(0, 420, 420)
@@ -134,8 +134,9 @@ class Animation(object):
                 self.cartesian_y[i] = self.cartesian_y[i-1]
                 self.polar_x[i] = self.polar_x[i-1]
                 self.polar_y[i] = self.polar_y[i-1]
-                self.prediction_x[i] = self.prediction_x[i-1]
-                self.prediction_y[i] = self.prediction_y[i-1]
+                self.kalman_filter.update_polar(i)
+                self.prediction_x[i] = self.kalman_filter.x[0]
+                self.prediction_y[i] = self.kalman_filter.x[1]
 
         # calculate position
         self.pos_x = np.array([self.air.get_position(i)[0] for i in self.t])
@@ -179,7 +180,7 @@ class Animation(object):
         self.ln7.set_data(self.polar_x[:i], self.polar_y[:i])
 
         # kalman
-        self.ln10.set_data(self.prediction_x[:i], self.prediction_y[:i])
+        self.ln10.set_data(self.prediction_x[i-25:i], self.prediction_y[i-25:i])
 
         # plot quiver
         q_tang = self.ax.quiver(x, y, self.air.tang[0], self.air.tang[1], pivot='tail', color='black', width=0.004, angles='xy', scale=25)
@@ -197,11 +198,15 @@ if __name__ == "__main__":
     T = 420
     # set up objects
     air = airc.Aircraft(300, 9, 0)
-    sensor_position = np.array((5000, -1500)).reshape((2, 1))
-    sensor_position2 = np.array((-1200, 4000)).reshape((2, 1))
+    sensor_position = np.array((-11000, -11000)).reshape((2, 1))
+    sensor_position2 = np.array((-11000, 11000)).reshape((2, 1))
+    sensor_position3 = np.array((11000, -11000)).reshape((2, 1))
+    sensor_position4 = np.array((11000, 11000)).reshape((2, 1))
     # o.2 grad is 0.00349066 radiant
     sensor = sen.Sensor(50, 20, 0.00349066, 5, sensor_position, air)
     sensor2 = sen.Sensor(50, 20, 0.00349066, 5, sensor_position2, air)
+    sensor3 = sen.Sensor(50, 20, 0.00349066, 5, sensor_position3, air)
+    sensor4 = sen.Sensor(50, 20, 0.00349066, 5, sensor_position4, air)
 
     # set up figure and subplots
     font = {'size': 9}
