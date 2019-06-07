@@ -1,14 +1,14 @@
 from matplotlib.pylab import *
 from matplotlib.animation import FuncAnimation
-import sensor_simulator as sen
-import aircraft as airc
+from sensor_simulator import Sensor
+from aircraft import Aircraft
 from matplotlib.lines import Line2D
-import kalman_filter as kf
+from kalman_filter import KalmanFilter
 
 
 class Animation(object):
 
-    def __init__(self, ax, ax2, ax3, ax4, ax5, ax6, air, sensor, *args):
+    def __init__(self, ax, ax2, ax3, ax4, ax5, ax6, air, *args):
         """Setting up all local variables and calculate plot data"""
         # set up objects
         self.ax = ax
@@ -17,14 +17,18 @@ class Animation(object):
         self.ax4 = ax4
         self.ax5 = ax5
         self.ax6 = ax6
+        # set aircraft object
         self.air = air
-        self.sensor = sensor
+        # add kalman object
+        self.kalman_filter = KalmanFilter(air, 5, *args)
 
         # variable number of sensors
         self.sensors = args
         self.sen_num = 0
+        self.delta_t = 0
         for arg in args:
-            if isinstance(arg, sen.Sensor):
+            if isinstance(arg, Sensor):
+                self.delta_t = arg.delta_t
                 self.sen_num += 1
 
         # set up lines
@@ -107,9 +111,6 @@ class Animation(object):
         self.ax6.set_xlim(-24000, 24000)
         self.ax6.set_ylim(-24000, 24000)
 
-        # add kalman object
-        self.kalman_filter = kf.kalman(air, 5, sensor, sensor2, sensor3, sensor4)
-
         # set up data for lines
         # time array
         self.t = np.arange(0, 420, 1)
@@ -136,7 +137,7 @@ class Animation(object):
 
         # calculate sensor data for each instance delta t
         for i in self.t:
-            if i % self.sensor.delta_t == 0 or i == 0:
+            if i % self.delta_t == 0 or i == 0:
                 # get fused polar measurements
                 self.kalman_filter.update_polar(i)
                 self.polar_fused_x[i] = self.kalman_filter.z[0]
@@ -150,7 +151,7 @@ class Animation(object):
                 # get measurement for each sensor
                 for arg in self.sensors:
                     j = 0
-                    if isinstance(arg, sen.Sensor):
+                    if isinstance(arg, Sensor):
                         arg.update_stats(i)
                         z = arg.z_r * np.array([np.cos(arg.z_az), np.sin(arg.z_az)]).reshape((2, 1)) + arg.pos
                         self.polar_meas_x[j, i] = z[0]
@@ -166,7 +167,7 @@ class Animation(object):
                 # fill up measurements of each sensor
                 for arg in self.sensors:
                     j = 0
-                    if isinstance(arg, sen.Sensor):
+                    if isinstance(arg, Sensor):
                         arg.update_stats(i)
                         self.polar_meas_x[j, i] = self.polar_meas_x[j, i-1]
                         self.polar_meas_y[j, i] = self.polar_meas_y[j, i-1]
@@ -184,7 +185,7 @@ class Animation(object):
 
         # set up sensor position for variable num of sensors
         for arg in self.sensors:
-            if isinstance(arg, sen.Sensor):
+            if isinstance(arg, Sensor):
                 self.ax.plot(arg.pos[0], arg.pos[1], 'ro')
 
         return lines
@@ -232,7 +233,7 @@ class Animation(object):
 
         # plot quivers for each sensor
         for arg in self.sensors:
-            if isinstance(arg, sen.Sensor):
+            if isinstance(arg, Sensor):
                 arg.update_stats(i)
                 # all vectors pointing to their own measurement
                 z = arg.z_r * np.array([np.cos(arg.z_az), np.sin(arg.z_az)]).reshape((2, 1)) + arg.pos
@@ -243,19 +244,19 @@ class Animation(object):
 
 
 if __name__ == "__main__":
-
+    # Testing Animation with Kalman Filter
     T = 420
     # set up objects
-    air = airc.Aircraft(300, 9, 0)
+    air = Aircraft(300, 9, 0)
     sensor_position = np.array((-11000, -11000)).reshape((2, 1))
     sensor_position2 = np.array((-11000, 11000)).reshape((2, 1))
     sensor_position3 = np.array((11000, -11000)).reshape((2, 1))
     sensor_position4 = np.array((11000, 11000)).reshape((2, 1))
     # o.2 grad is 0.00349066 radiant
-    sensor = sen.Sensor(50, 20, 0.00349066, 5, sensor_position, air)
-    sensor2 = sen.Sensor(50, 20, 0.00349066, 5, sensor_position2, air)
-    sensor3 = sen.Sensor(50, 20, 0.00349066, 5, sensor_position3, air)
-    sensor4 = sen.Sensor(50, 20, 0.00349066, 5, sensor_position4, air)
+    sensor = Sensor(50, 20, 0.00349066, 5, sensor_position, air)
+    sensor2 = Sensor(50, 20, 0.00349066, 5, sensor_position2, air)
+    sensor3 = Sensor(50, 20, 0.00349066, 5, sensor_position3, air)
+    sensor4 = Sensor(50, 20, 0.00349066, 5, sensor_position4, air)
 
     # set up figure and subplots
     font = {'size': 9}

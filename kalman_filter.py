@@ -3,7 +3,9 @@ from aircraft import Aircraft
 import numpy as np
 from numpy.linalg import inv
 
-class kalman:
+
+class KalmanFilter:
+
     def __init__(self, aircraft, sigma, *argv):
         """Initialize local variables and measurement data for filter"""
         # initialize objects
