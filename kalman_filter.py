@@ -140,11 +140,15 @@ class kalman:
         return z, R
 
     def update_cartesian(self, t):
+        """Calculate Kalman Filter based on cartesian sensor measurements for time instance t"""
+        """Updates class variables x(prediction), P(covariance) and z(measurement)"""
         self.x, self.P = self.prediction(t)
         self.z = self.fusion(t)
         self.x, self.P = self.filtering(t)
 
     def update_polar(self, t):
+        """Calculate Kalman Filter based on polar sensor measurements for time instance t"""
+        """Updates class variables x(prediction), P(covariance), z(measurement) and R(covariance)"""
         self.x, self.P = self.prediction(t)
         self.z, self.R = self.fusion_polar(t)
         print("measuremetn z AFTER FUSION:\n", self.z)

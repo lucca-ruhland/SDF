@@ -46,7 +46,11 @@ class Animation(object):
         # cartesian
         self.ln9 = Line2D([], [], color='r', marker='x', linewidth=0)
         # prediction
-        self.ln10 = Line2D([], [], color='r', marker='^', linewidth=0)
+        self.ln10 = Line2D([], [], color='r', marker='o', linewidth=0)
+        # polar measurement for each sensor
+        self.ln11 = Line2D([], [], color='g', marker='x', linewidth=0)
+        # fused polar measurements
+        self.ln12 = Line2D([], [], color='r', marker='^', linewidth=0)
 
         ax.add_line(self.ln)
         ax.add_line(self.ln2)
@@ -54,6 +58,8 @@ class Animation(object):
         ax.add_line(self.ln8)
         ax.add_line(self.ln9)
         ax.add_line(self.ln10)
+        ax.add_line(self.ln11)
+        ax.add_line(self.ln12)
 
         # set up ax2
         self.ax2.set_xlim(-10, 430)
@@ -126,6 +132,14 @@ class Animation(object):
         self.prediction_x = np.zeros(420)
         self.prediction_y = np.zeros(420)
 
+        # polar measurement transformed to cartesian for each sensor
+        self.polar_meas_x = np.zeros((self.sen_num, 420))
+        self.polar_meas_y = np.zeros((self.sen_num, 420))
+
+        # fused polar measurements transformed to cartesian
+        self.polar_fused_x = np.zeros(420)
+        self.polar_fused_y = np.zeros(420)
+
         # calculate sensor data for each instance delta t
         for i in self.t:
             if i % self.sensor.delta_t == 0 or i == 0:
@@ -133,9 +147,28 @@ class Animation(object):
                 self.cartesian_y[i] = self.sensor.cartesian(i)[1]
                 self.polar_x[i] = self.sensor.range(i) * np.cos(self.sensor.azimuth(i)) + self.sensor.pos[0]
                 self.polar_y[i] = self.sensor.range(i) * np.sin(self.sensor.azimuth(i)) + self.sensor.pos[1]
+
+                # get fused polar measurements
+                self.kalman_filter.update_polar(i)
+                self.polar_fused_x[i] = self.kalman_filter.z[0]
+                self.polar_fused_y[i] = self.kalman_filter.z[1]
+
+                # get prediction after filtering
                 self.kalman_filter.update_polar(i)
                 self.prediction_x[i] = self.kalman_filter.x[0]
                 self.prediction_y[i] = self.kalman_filter.x[1]
+
+                # get measurement for each sensor
+                for arg in self.sensors:
+                    j = 0
+                    if isinstance(arg, sen.Sensor):
+                        arg.update_stats(i)
+                        z = arg.z_r * np.array([np.cos(arg.z_az), np.sin(arg.z_az)]).reshape((2, 1)) + arg.pos
+                        self.polar_meas_x[j, i] = z[0]
+                        self.polar_meas_y[j, i] = z[1]
+                        j = j +1
+
+            # fill up array with existing values
             else:
                 self.cartesian_x[i] = self.cartesian_x[i-1]
                 self.cartesian_y[i] = self.cartesian_y[i-1]
@@ -145,13 +178,22 @@ class Animation(object):
                 self.prediction_x[i] = self.kalman_filter.x[0]
                 self.prediction_y[i] = self.kalman_filter.x[1]
 
+                # fill up measurements of each sensor
+                for arg in self.sensors:
+                    j = 0
+                    if isinstance(arg, sen.Sensor):
+                        arg.update_stats(i)
+                        self.polar_meas_x[j, i] = self.polar_meas_x[j, i-1]
+                        self.polar_meas_y[j, i] = self.polar_meas_y[j, i-1]
+
         # calculate position
         self.pos_x = np.array([self.air.get_position(i)[0] for i in self.t])
         self.pos_y = np.array([self.air.get_position(i)[1] for i in self.t])
 
     def init_plot(self):
         """Setting all initial values for the data plots"""
-        lines = [self.ln, self.ln2, self.ln3, self.ln4, self.ln5, self.ln6, self.ln7, self.ln8, self.ln9, self.ln10]
+        lines = [self.ln, self.ln2, self.ln3, self.ln4, self.ln5, self.ln6, self.ln7, self.ln8, self.ln9, self.ln10,
+                 self.ln11, self.ln12]
         for l in lines:
             l.set_data([], [])
         # set sensor position
@@ -189,13 +231,19 @@ class Animation(object):
 
         # update cartesian measurements
         # if i % self.sensor.delta_t == 0:
-        self.ln9.set_data(self.cartesian_x[:i], self.cartesian_y[:i])
-        self.ln7.set_data(self.polar_x[:i], self.polar_y[:i])
+        # self.ln9.set_data(self.cartesian_x[:i], self.cartesian_y[:i])
+        # self.ln7.set_data(self.polar_x[:i], self.polar_y[:i])
 
-        # kalman
+        # kalman plot prediction after filter
         self.ln10.set_data(self.prediction_x[i-10:i], self.prediction_y[i-10:i])
 
-        # plot quiver
+        # kalman plot measurements for each sensor
+        self.ln11.set_data(self.polar_meas_x[:, :i], self.polar_meas_y[:, :i])
+
+        # kalman plot fused measurement
+        self.ln12.set_data(self.polar_fused_x[:i], self.polar_fused_y[:i])
+
+        # plot quiver for object
         q_tang = self.ax.quiver(x, y, self.air.tang[0], self.air.tang[1], pivot='tail', color='black', width=0.004, angles='xy', scale=25)
         # plot normal vector
         q_norm = self.ax.quiver(x, y, self.air.norm[0], self.air.norm[1], pivot='tail', color='black', width=0.004, scale=25)
@@ -203,13 +251,17 @@ class Animation(object):
         q_polar = ax.quiver(self.sensor.pos[0], self.sensor.pos[1], self.polar_x[i] - self.sensor.pos[0], self.polar_y[i]- self.sensor.pos[1], pivot='tail',
                              color='green', angles='xy', units='xy', scale=1, scale_units='xy', width=70)
 
-        artists = [self.ln, self.ln2, self.ln3, self.ln4, self.ln5, self.ln6, self.ln7, self.ln9, self.ln10, q_norm,
-                   q_tang, q_polar]
+        artists = [self.ln, self.ln2, self.ln3, self.ln4, self.ln5, self.ln6, self.ln7, self.ln9, self.ln10, self.ln11,
+                   self.ln12, q_norm, q_tang, q_polar]
 
         # plot quivers for each sensor
         for arg in self.sensors:
             if isinstance(arg, sen.Sensor):
-                artists.append(ax.quiver(arg.pos[0], arg.pos[1], self.polar_x[i] - arg.pos[0], self.polar_y[i] - arg.pos[1], pivot='tail', color='green', angles='xy', units='xy', scale=1, scale_units='xy', width=70))
+                arg.update_stats(i)
+                # artists.append(ax.quiver(arg.pos[0], arg.pos[1], self.polar_x[i] - arg.pos[0], self.polar_y[i] - arg.pos[1], pivot='tail', color='green', angles='xy', units='xy', scale=1, scale_units='xy', width=70))
+                # all vectors pointing to their own measurement
+                z = arg.z_r * np.array([np.cos(arg.z_az), np.sin(arg.z_az)]).reshape((2, 1)) + arg.pos
+                artists.append(ax.quiver(arg.pos[0], arg.pos[1], z[0] - arg.pos[0], z[1] - arg.pos[1], pivot='tail', color='green', angles='xy', units='xy', scale=1, scale_units='xy', width=70))
 
         return artists
 
