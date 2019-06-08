@@ -277,23 +277,27 @@ if __name__ == "__main__":
     sensor_position2 = np.array((-11000, 11000)).reshape((2, 1))
     sensor_position3 = np.array((11000, -11000)).reshape((2, 1))
     sensor_position4 = np.array((11000, 11000)).reshape((2, 1))
+    # even more sensor test
+    # sensor_position5 = np.array((-1100, -11000)).reshape((2, 1))
+    # sensor_position6 = np.array((-4000, 7000)).reshape((2, 1))
+    # sensor_position7 = np.array((2000, -9000)).reshape((2, 1))
+    # sensor_position8 = np.array((100, 980)).reshape((2, 1))
     # o.2 grad is 0.00349066 radiant
     sensor = Sensor(50, 20, 0.00349066, 5, sensor_position, air)
     sensor2 = Sensor(50, 20, 0.00349066, 5, sensor_position2, air)
     sensor3 = Sensor(50, 20, 0.00349066, 5, sensor_position3, air)
     sensor4 = Sensor(50, 20, 0.00349066, 5, sensor_position4, air)
 
+    # sensor5 = Sensor(50, 20, 0.00349066, 5, sensor_position5, air)
+    # sensor6 = Sensor(50, 20, 0.00349066, 5, sensor_position6, air)
+    # sensor7 = Sensor(50, 20, 0.00349066, 5, sensor_position7, air)
+    # sensor8 = Sensor(50, 20, 0.00349066, 5, sensor_position8, air)
+
     # set up figure and subplots
     font = {'size': 9}
     matplotlib.rc('font', **font)
     fig = figure(num=0, figsize=(16, 9))
     fig.suptitle("ground truth generator", fontsize=12)
-    # ax = plt.subplot2grid((3, 3), (0, 0), colspan=2)
-    # ax2 = plt.subplot2grid((3, 3), (1, 0), colspan=2)
-    # ax3 = plt.subplot2grid((3, 3), (1, 2), rowspan=2)
-    # ax4 = plt.subplot2grid((3, 3), (2, 0))
-    # ax5 = plt.subplot2grid((3, 3), (2, 1))
-    # ax6 = plt.subplot2grid((3, 3), (0, 2))
     gs1 = gridspec.GridSpec(3, 3)
     gs1.update(left=0.05, right=0.48, wspace=0.05)
     ax = plt.subplot(gs1[:2, :])
