@@ -4,6 +4,7 @@ from sensor_simulator import Sensor
 from aircraft import Aircraft
 from matplotlib.lines import Line2D
 from kalman_filter import KalmanFilter
+import matplotlib.gridspec as gridspec
 
 
 class Animation(object):
@@ -285,18 +286,29 @@ if __name__ == "__main__":
     # set up figure and subplots
     font = {'size': 9}
     matplotlib.rc('font', **font)
-    fig = figure(num=0, figsize=(16, 9))  # , dpi = 100)
+    fig = figure(num=0, figsize=(16, 9))
     fig.suptitle("ground truth generator", fontsize=12)
-    ax = plt.subplot2grid((3, 3), (0, 0), colspan=2)
-    ax2 = plt.subplot2grid((3, 3), (1, 0), colspan=2)
-    ax3 = plt.subplot2grid((3, 3), (1, 2), rowspan=2)
-    ax4 = plt.subplot2grid((3, 3), (2, 0))
-    ax5 = plt.subplot2grid((3, 3), (2, 1))
-    ax6 = plt.subplot2grid((3, 3), (0, 2))
+    # ax = plt.subplot2grid((3, 3), (0, 0), colspan=2)
+    # ax2 = plt.subplot2grid((3, 3), (1, 0), colspan=2)
+    # ax3 = plt.subplot2grid((3, 3), (1, 2), rowspan=2)
+    # ax4 = plt.subplot2grid((3, 3), (2, 0))
+    # ax5 = plt.subplot2grid((3, 3), (2, 1))
+    # ax6 = plt.subplot2grid((3, 3), (0, 2))
+    gs1 = gridspec.GridSpec(3, 3)
+    gs1.update(left=0.05, right=0.48, wspace=0.05)
+    ax = plt.subplot(gs1[:2, :])
+    ax6 = plt.subplot(gs1[2, :])
+
+    gs2 = gridspec.GridSpec(3, 3)
+    gs2.update(left=0.55, right=0.98, hspace=0.5)
+    ax2 = plt.subplot(gs2[1, :2])
+    ax3 = plt.subplot(gs2[2, :])
+    ax4 = plt.subplot(gs2[0, :2])
+    ax5 = plt.subplot(gs2[:-1, -1])
 
     # plot animation
     ani = Animation(ax, ax2, ax3, ax4, ax5, ax6, air, sensor, sensor2, sensor3, sensor4)
     animation = FuncAnimation(fig, ani, frames=T, init_func=ani.init_plot, interval=60,  blit=True, repeat=True)
 
-    plt.tight_layout()
+    # plt.tight_layout()
     plt.show()

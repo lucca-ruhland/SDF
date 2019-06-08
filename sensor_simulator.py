@@ -1,5 +1,5 @@
 import numpy as np
-import aircraft as airc
+from aircraft import Aircraft
 
 
 class Sensor:
@@ -70,7 +70,7 @@ class Sensor:
 
 def main():
 
-    aircraft = airc.Aircraft(300, 9, 0)
+    aircraft = Aircraft(300, 9, 0)
     # defining sensor position
     sensor_pos = np.zeros((2, 1))
     sensor_pos[0] = 0
