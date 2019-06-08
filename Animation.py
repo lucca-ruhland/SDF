@@ -35,9 +35,9 @@ class Animation(object):
         # object trace
         self.ln_trace = Line2D([], [], color='b')
         # moving object
-        self.ln_object = Line2D([], [], color='r', marker='o')
+        self.ln_object = Line2D([], [], color='k', marker='o')
         # prediction
-        self.ln_prediction = Line2D([], [], color='r', marker='o', linewidth=0)
+        self.ln_prediction = Line2D([], [], color='m', marker='o', linewidth=0)
         # polar measurement for each sensor
         self.ln_meas = Line2D([], [], color='g', marker='x', linewidth=0)
         # fused polar measurements
@@ -50,6 +50,8 @@ class Animation(object):
         self.ln_vec_t = Line2D([], [], color='b')
         # vector products with r''(t) & n(t)
         self.ln_vec_n = Line2D([], [], color='b')
+        # difference between filtered prediction and real position
+        self.ln_diff = Line2D([], [], color='b')
 
         # set up ax
         self.ax.set_xlim(-12000, 12000)
@@ -59,12 +61,20 @@ class Animation(object):
         self.ax.set_ylabel("x in meter")
         ax.grid(True)
 
-
         ax.add_line(self.ln_trace)
         ax.add_line(self.ln_object)
         ax.add_line(self.ln_prediction)
         ax.add_line(self.ln_meas)
         ax.add_line(self.ln_fused)
+        # set up legend
+        legend_lines = [self.ln_prediction, self.ln_meas, self.ln_fused]
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0 + box.height * 0.1,
+                         box.width, box.height * 0.9])
+
+        # Put a legend below current axis
+        ax.legend(legend_lines, ['filtered prediction', 'polar measurements', 'fused measurements'], loc='upper center',
+                  bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True, ncol=5)
 
         # set up ax2
         self.ax2.set_xlim(-10, 430)
@@ -100,16 +110,16 @@ class Animation(object):
         self.ax5.set_xlabel("r''(t)n(t) in m/s^2")
         self.ax5.set_ylabel("t in meter")
         ax5.grid(True)
-
         ax5.add_line(self.ln_vec_n)
 
         # set up ax6
-        ax6.set_title("sensor polar measurements")
+        ax6.set_title("Difference between filtered prediction and real object position")
         self.ax6.set_xlabel("time in seconds")
-        self.ax6.set_ylabel("range in meter")
+        self.ax6.set_ylabel("distance in meter")
         ax6.grid(True)
-        self.ax6.set_xlim(-24000, 24000)
-        self.ax6.set_ylim(-24000, 24000)
+        self.ax6.set_xlim(-10, 430)
+        self.ax6.set_ylim(-10, 1000)
+        ax6.add_line(self.ln_diff)
 
         # set up data for lines
         # time array
@@ -148,15 +158,15 @@ class Animation(object):
                 self.prediction_x[i] = self.kalman_filter.x[0]
                 self.prediction_y[i] = self.kalman_filter.x[1]
 
+                j = 0
                 # get measurement for each sensor
                 for arg in self.sensors:
-                    j = 0
                     if isinstance(arg, Sensor):
                         arg.update_stats(i)
                         z = arg.z_r * np.array([np.cos(arg.z_az), np.sin(arg.z_az)]).reshape((2, 1)) + arg.pos
                         self.polar_meas_x[j, i] = z[0]
                         self.polar_meas_y[j, i] = z[1]
-                        j = j +1
+                        j = j + 1
 
             # fill up array with existing values
             else:
@@ -165,28 +175,36 @@ class Animation(object):
                 self.prediction_y[i] = self.kalman_filter.x[1]
 
                 # fill up measurements of each sensor
+                j = 0
                 for arg in self.sensors:
-                    j = 0
                     if isinstance(arg, Sensor):
-                        arg.update_stats(i)
+                        # arg.update_stats(i)
                         self.polar_meas_x[j, i] = self.polar_meas_x[j, i-1]
                         self.polar_meas_y[j, i] = self.polar_meas_y[j, i-1]
+                        j = j + 1
 
         # calculate position
         self.pos_x = np.array([self.air.get_position(i)[0] for i in self.t])
         self.pos_y = np.array([self.air.get_position(i)[1] for i in self.t])
 
+        # calculate difference
+        self.diff_x = np.array([self.prediction_x[i] - self.pos_x[i] for i in self.t])
+        self.diff_y = np.array([self.prediction_y[i] - self.pos_y[i] for i in self.t])
+        self.diff_abs = np.array([np.linalg.norm((self.diff_x[i], self.diff_y[i])) for i in self.t])
+        # set max y of ax6
+        self.ax6.set_ylim(-10, np.amax(self.diff_abs) * 1.2)
+
     def init_plot(self):
         """Setting all initial values for the data plots"""
         lines = [self.ln_trace, self.ln_object, self.ln_vel, self.ln_acc, self.ln_vec_t, self.ln_vec_n,
-                 self.ln_prediction, self.ln_meas, self.ln_fused]
+                 self.ln_prediction, self.ln_meas, self.ln_fused, self.ln_diff]
         for l in lines:
             l.set_data([], [])
 
         # set up sensor position for variable num of sensors
         for arg in self.sensors:
             if isinstance(arg, Sensor):
-                self.ax.plot(arg.pos[0], arg.pos[1], 'ro')
+                self.ax.plot(arg.pos[0], arg.pos[1], 'go')
 
         return lines
 
@@ -213,7 +231,7 @@ class Animation(object):
         self.ln_vec_n.set_data(self.t[:i], self.tang[:i])
 
         # kalman plot prediction after filter
-        self.ln_prediction.set_data(self.prediction_x[i-10:i], self.prediction_y[i-10:i])
+        self.ln_prediction.set_data(self.prediction_x[i-15:i], self.prediction_y[i-15:i])
 
         # kalman plot measurements for each sensor
         self.ln_meas.set_data(self.polar_meas_x[:, :i], self.polar_meas_y[:, :i])
@@ -221,24 +239,30 @@ class Animation(object):
         # kalman plot fused measurement
         self.ln_fused.set_data(self.polar_fused_x[:i], self.polar_fused_y[:i])
 
+        # kalman plot difference between filtered prediction and real object position
+        self.ln_diff.set_data(self.t[:i], self.diff_abs[:i])
+
         # plot quiver for object
         q_tang = self.ax.quiver(x, y, self.air.tang[0], self.air.tang[1], pivot='tail', color='black', width=0.004,
-                                angles='xy', scale=25)
+                                angles='xy', scale=35)
         # plot normal vector
         q_norm = self.ax.quiver(x, y, self.air.norm[0], self.air.norm[1], pivot='tail', color='black', width=0.004,
-                                scale=25)
+                                scale=35)
 
         artists = [self.ln_trace, self.ln_object, self.ln_vel, self.ln_acc, self.ln_vec_t, self.ln_vec_n,
-                   self.ln_prediction, self.ln_meas, self.ln_fused, q_norm, q_tang]
+                   self.ln_prediction, self.ln_meas, self.ln_fused, self.ln_diff, q_norm, q_tang]
 
         # plot quivers for each sensor
+        j = 0
         for arg in self.sensors:
             if isinstance(arg, Sensor):
                 arg.update_stats(i)
                 # all vectors pointing to their own measurement
-                z = arg.z_r * np.array([np.cos(arg.z_az), np.sin(arg.z_az)]).reshape((2, 1)) + arg.pos
+                # z = arg.z_r * np.array([np.cos(arg.z_az), np.sin(arg.z_az)]).reshape((2, 1)) + arg.pos
+                z = np.array([self.polar_meas_x[j, i], self.polar_meas_y[j, i]])
                 artists.append(ax.quiver(arg.pos[0], arg.pos[1], z[0] - arg.pos[0], z[1] - arg.pos[1], pivot='tail',
                                          color='green', angles='xy', units='xy', scale=1, scale_units='xy', width=70))
+                j = j + 1
 
         return artists
 
@@ -272,9 +296,7 @@ if __name__ == "__main__":
 
     # plot animation
     ani = Animation(ax, ax2, ax3, ax4, ax5, ax6, air, sensor, sensor2, sensor3, sensor4)
-    animation = FuncAnimation(fig, ani, frames=T, init_func=ani.init_plot, interval=50,  blit=True, repeat=True)
+    animation = FuncAnimation(fig, ani, frames=T, init_func=ani.init_plot, interval=60,  blit=True, repeat=True)
 
-    # ax.legend()
-    # ax6.legend()
     plt.tight_layout()
     plt.show()

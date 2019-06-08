@@ -32,7 +32,7 @@ class Sensor:
     def get_u(self, sg1, sg2):
         """returns Matrix for normal distribution"""
         u = np.array([sg1 * np.random.normal(0, 1), sg2 * np.random.normal(0, 1)])
-        return 10 * u
+        return 10 * u  # multiplier making sensor measurements more inaccurate
 
     def cartesian(self, t):
         """Returns the cartesian measurements of the aircraft for time instanct t"""
