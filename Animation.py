@@ -9,10 +9,10 @@ import matplotlib.gridspec as gridspec
 
 class Animation(object):
 
-    def __init__(self, ax, ax2, ax3, ax4, ax5, ax6, air, *args):
+    def __init__(self, ax1, ax2, ax3, ax4, ax5, ax6, air, *args):
         """Setting up all local variables and calculate plot data"""
         # set up objects
-        self.ax = ax
+        self.ax1 = ax1
         self.ax2 = ax2
         self.ax3 = ax3
         self.ax4 = ax4
@@ -54,27 +54,27 @@ class Animation(object):
         # difference between filtered prediction and real position
         self.ln_diff = Line2D([], [], color='b')
 
-        # set up ax
-        self.ax.set_xlim(-12000, 12000)
-        self.ax.set_ylim(-12000, 12000)
-        ax.set_title("aircraft trajectory")
-        self.ax.set_xlabel("y in meter")
-        self.ax.set_ylabel("x in meter")
-        ax.grid(True)
+        # set up ax1
+        self.ax1.set_xlim(-12000, 12000)
+        self.ax1.set_ylim(-12000, 12000)
+        ax1.set_title("aircraft trajectory")
+        self.ax1.set_xlabel("y in meter")
+        self.ax1.set_ylabel("x in meter")
+        ax1.grid(True)
 
-        ax.add_line(self.ln_trace)
-        ax.add_line(self.ln_object)
-        ax.add_line(self.ln_prediction)
-        ax.add_line(self.ln_meas)
-        ax.add_line(self.ln_fused)
+        ax1.add_line(self.ln_trace)
+        ax1.add_line(self.ln_object)
+        ax1.add_line(self.ln_prediction)
+        ax1.add_line(self.ln_meas)
+        ax1.add_line(self.ln_fused)
         # set up legend
         legend_lines = [self.ln_prediction, self.ln_meas, self.ln_fused]
-        box = ax.get_position()
-        ax.set_position([box.x0, box.y0 + box.height * 0.1,
+        box = ax1.get_position()
+        ax1.set_position([box.x0, box.y0 + box.height * 0.1,
                          box.width, box.height * 0.9])
 
         # Put a legend below current axis
-        ax.legend(legend_lines, ['filtered prediction', 'polar measurements', 'fused measurements'], loc='upper center',
+        ax1.legend(legend_lines, ['filtered prediction', 'polar measurements', 'fused measurements'], loc='upper center',
                   bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True, ncol=5)
 
         # set up ax2
@@ -205,7 +205,7 @@ class Animation(object):
         # set up sensor position for variable num of sensors
         for arg in self.sensors:
             if isinstance(arg, Sensor):
-                self.ax.plot(arg.pos[0], arg.pos[1], 'go')
+                self.ax1.plot(arg.pos[0], arg.pos[1], 'go')
 
         return lines
 
@@ -244,10 +244,10 @@ class Animation(object):
         self.ln_diff.set_data(self.t[:i], self.diff_abs[:i])
 
         # plot quiver for object
-        q_tang = self.ax.quiver(x, y, self.air.tang[0], self.air.tang[1], pivot='tail', color='black', width=0.004,
+        q_tang = self.ax1.quiver(x, y, self.air.tang[0], self.air.tang[1], pivot='tail', color='black', width=0.004,
                                 angles='xy', scale=35)
         # plot normal vector
-        q_norm = self.ax.quiver(x, y, self.air.norm[0], self.air.norm[1], pivot='tail', color='black', width=0.004,
+        q_norm = self.ax1.quiver(x, y, self.air.norm[0], self.air.norm[1], pivot='tail', color='black', width=0.004,
                                 scale=35)
 
         artists = [self.ln_trace, self.ln_object, self.ln_vel, self.ln_acc, self.ln_vec_t, self.ln_vec_n,
@@ -261,7 +261,7 @@ class Animation(object):
                 # all vectors pointing to their own measurement
                 # z = arg.z_r * np.array([np.cos(arg.z_az), np.sin(arg.z_az)]).reshape((2, 1)) + arg.pos
                 z = np.array([self.polar_meas_x[j, i], self.polar_meas_y[j, i]])
-                artists.append(ax.quiver(arg.pos[0], arg.pos[1], z[0] - arg.pos[0], z[1] - arg.pos[1], pivot='tail',
+                artists.append(ax1.quiver(arg.pos[0], arg.pos[1], z[0] - arg.pos[0], z[1] - arg.pos[1], pivot='tail',
                                          color='green', angles='xy', units='xy', scale=1, scale_units='xy', width=70))
                 j = j + 1
 
@@ -300,7 +300,7 @@ if __name__ == "__main__":
     fig.suptitle("ground truth generator", fontsize=12)
     gs1 = gridspec.GridSpec(3, 3)
     gs1.update(left=0.05, right=0.48, wspace=0.05)
-    ax = plt.subplot(gs1[:2, :])
+    ax1 = plt.subplot(gs1[:2, :])
     ax6 = plt.subplot(gs1[2, :])
 
     gs2 = gridspec.GridSpec(3, 3)
@@ -311,7 +311,7 @@ if __name__ == "__main__":
     ax5 = plt.subplot(gs2[:-1, -1])
 
     # plot animation
-    ani = Animation(ax, ax2, ax3, ax4, ax5, ax6, air, sensor, sensor2, sensor3, sensor4)
+    ani = Animation(ax1, ax2, ax3, ax4, ax5, ax6, air, sensor, sensor2, sensor3, sensor4)
     animation = FuncAnimation(fig, ani, frames=T, init_func=ani.init_plot, interval=60,  blit=True, repeat=True)
 
     # plt.tight_layout()
