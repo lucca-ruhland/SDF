@@ -83,7 +83,7 @@ def main():
         obj_pos = np.array([sensor.z_c]).reshape((2, 1))
         r = sensor.z_r
         az = sensor.z_az
-        z = r * np.array([np.cos(az), np.sin(az)]).reshape((2, 1))
+        z = r * np.array([np.cos(az), np.sin(az)]).reshape((2, 1)) + sensor_pos
         print("object position: \n", obj_pos)
         print("recalculated position:\n", z)
         dif = obj_pos - z

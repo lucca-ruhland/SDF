@@ -74,8 +74,8 @@ class Animation(object):
                          box.width, box.height * 0.9])
 
         # Put a legend below current axis
-        ax1.legend(legend_lines, ['filtered prediction', 'polar measurements', 'fused measurements'], loc='upper center',
-                  bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True, ncol=5)
+        ax1.legend(legend_lines, ['filtered prediction', 'polar measurements', 'fused measurements'],
+                   loc='upper center',bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True, ncol=5)
 
         # set up ax2
         self.ax2.set_xlim(-10, 430)
@@ -245,10 +245,10 @@ class Animation(object):
 
         # plot quiver for object
         q_tang = self.ax1.quiver(x, y, self.air.tang[0], self.air.tang[1], pivot='tail', color='black', width=0.004,
-                                angles='xy', scale=35)
+                                 angles='xy', scale=35)
         # plot normal vector
         q_norm = self.ax1.quiver(x, y, self.air.norm[0], self.air.norm[1], pivot='tail', color='black', width=0.004,
-                                scale=35)
+                                 scale=35)
 
         artists = [self.ln_trace, self.ln_object, self.ln_vel, self.ln_acc, self.ln_vec_t, self.ln_vec_n,
                    self.ln_prediction, self.ln_meas, self.ln_fused, self.ln_diff, q_norm, q_tang]
@@ -262,7 +262,7 @@ class Animation(object):
                 # z = arg.z_r * np.array([np.cos(arg.z_az), np.sin(arg.z_az)]).reshape((2, 1)) + arg.pos
                 z = np.array([self.polar_meas_x[j, i], self.polar_meas_y[j, i]])
                 artists.append(ax1.quiver(arg.pos[0], arg.pos[1], z[0] - arg.pos[0], z[1] - arg.pos[1], pivot='tail',
-                                         color='green', angles='xy', units='xy', scale=1, scale_units='xy', width=70))
+                                          color='green', angles='xy', units='xy', scale=1, scale_units='xy', width=70))
                 j = j + 1
 
         return artists
