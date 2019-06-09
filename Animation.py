@@ -159,15 +159,13 @@ class Animation(object):
                 self.prediction_x[i] = self.kalman_filter.x[0]
                 self.prediction_y[i] = self.kalman_filter.x[1]
 
-                j = 0
                 # get measurement for each sensor
-                for arg in self.sensors:
+                for j, arg in enumerate(self.sensors):
                     if isinstance(arg, Sensor):
                         arg.update_stats(i)
                         z = arg.z_r * np.array([np.cos(arg.z_az), np.sin(arg.z_az)]).reshape((2, 1)) + arg.pos
                         self.polar_meas_x[j, i] = z[0]
                         self.polar_meas_y[j, i] = z[1]
-                        j = j + 1
 
             # fill up array with existing values
             else:
@@ -176,13 +174,11 @@ class Animation(object):
                 self.prediction_y[i] = self.kalman_filter.x[1]
 
                 # fill up measurements of each sensor
-                j = 0
-                for arg in self.sensors:
+                for j, arg in enumerate(self.sensors):
                     if isinstance(arg, Sensor):
                         # arg.update_stats(i)
                         self.polar_meas_x[j, i] = self.polar_meas_x[j, i-1]
                         self.polar_meas_y[j, i] = self.polar_meas_y[j, i-1]
-                        j = j + 1
 
         # calculate position
         self.pos_x = np.array([self.air.get_position(i)[0] for i in self.t])
@@ -254,8 +250,7 @@ class Animation(object):
                    self.ln_prediction, self.ln_meas, self.ln_fused, self.ln_diff, q_norm, q_tang]
 
         # plot quivers for each sensor
-        j = 0
-        for arg in self.sensors:
+        for j, arg in enumerate(self.sensors):
             if isinstance(arg, Sensor):
                 arg.update_stats(i)
                 # all vectors pointing to their own measurement
@@ -263,7 +258,6 @@ class Animation(object):
                 z = np.array([self.polar_meas_x[j, i], self.polar_meas_y[j, i]])
                 artists.append(ax1.quiver(arg.pos[0], arg.pos[1], z[0] - arg.pos[0], z[1] - arg.pos[1], pivot='tail',
                                           color='green', angles='xy', units='xy', scale=1, scale_units='xy', width=70))
-                j = j + 1
 
         return artists
 
