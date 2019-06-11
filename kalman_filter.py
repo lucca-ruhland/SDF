@@ -27,6 +27,15 @@ class KalmanFilter:
         # covaricance R
         self.R = np.zeros((2, 2))
 
+        # list of all state vectors x for retrodiction
+        # list_x = [x0|0,   x1|0,   x1|1, ... ]
+        self.list_x = []
+        self.list_x.append(self.x)
+        # list of all covariances P for retrodiction
+        # list_p = [p0|0,   p1|0,   p1|1 ...]
+        self.list_p = []
+        self.list_p.append(self.P)
+
     def get_covariance_r(self):
         """Harmonic mean of measurement covariance"""
         """Returns numpy array of dimension 2x2"""
@@ -105,6 +114,29 @@ class KalmanFilter:
         P = self.P - np.dot(np.dot(W, S), W.T)
         return x, P
 
+    def retrodiction(self, l, k, limit=0):
+        """Returns dynamic model for a past time instances l with knowledge of time instance k"""
+        """expecting l + 1 = k"""
+        """Returns two numpy arrays of dimension 4xl (all l state vector x) and 4x4*l (all l covariance matrix P)"""
+        F = self.get_dynamics_f()
+        x = []
+        P = []
+        print("list_x.shape:\n", len(self.list_x))
+        print("list_p.shape:\n", len(self.list_p))
+        # init x_l|k and P_l|k
+        _w = np.dot(np.dot(self.list_p[2 * l], F.T), inv(self.list_p[2 * l + 1]))
+        _x = self.list_x[2 * l] + np.dot(_w, (self.list_x[l + 1 + k] - self.list_x[2 * l + 1]))
+        x.append(_x)
+        _p = self.list_p[2 * l] + np.dot(np.dot(_w, (self.list_p[l + 1 + k] - self.list_p[2 * l + 1])), _w.T)
+        P.append(_p)
+        for i in range(l-1, limit, -1):
+            _w = np.dot(np.dot(self.list_p[2 * i], F.T), inv(self.list_p[2 * i + 1]))
+            _x = self.list_x[2 * i] + np.dot(_w, (_x - self.list_x[2 * l + 1]))
+            x.append(_x)
+            _p = self.list_p[2 * l] + np.dot(np.dot(_w, (self.list_p[l + 1 + k] - self.list_p[2 * l + 1])), _w.T)
+            P.append(_p)
+        return np.array(x), np.array(P)
+
     def fusion(self, t):
         """Combine measurements of all sensors into a single measurement"""
         """Returns a numpy array with dimension 2x1"""
@@ -152,9 +184,15 @@ class KalmanFilter:
         """Calculate Kalman Filter based on polar sensor measurements for time instance t"""
         """Updates class variables x(prediction), P(covariance), z(measurement) and R(covariance)"""
         self.x, self.P = self.prediction(t)
+        # add x and P to list for retrodiction
+        self.list_x.append(self.x)
+        self.list_p.append(self.P)
         self.z, self.R = self.fusion_polar(t)
         print("measuremetn z AFTER FUSION:\n", self.z)
         self.x, self.P = self.filtering(t)
+        # add x and P to list for retrodiction
+        self.list_x.append(self.x)
+        self.list_p.append(self.P)
         print("filtered prediction x:\n", self.x)
 
 
@@ -170,11 +208,17 @@ if __name__ == "__main__":
     sensor3 = Sensor(50, 20, 0.00349066, 5, sensor_position3, air)
     sensor_position4 = np.array((-6000, 3000)).reshape((2, 1))
     sensor4 = Sensor(50, 20, 0.00349066, 5, sensor_position4, air)
-    kalman_filter = kalman(air, 50, 5, sensor1, sensor2, sensor3, sensor4)
+    kalman_filter = KalmanFilter(air, 50, 5, sensor1, sensor2, sensor3, sensor4)
 
     # print(kalman_filter.z)
-    for i in range(0, 420, 5):
+    for i in range(0, 420):
         kalman_filter.update_polar(i)
+
+    x, p = kalman_filter.retrodiction(419, 420)
+    print("print out retrodiction\n=====================================================================\n")
+    for i in range(0, 420):
+        print("i:", i)
+        print(x[i])
 
 
 

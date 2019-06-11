@@ -53,6 +53,8 @@ class Animation(object):
         self.ln_vec_n = Line2D([], [], color='b')
         # difference between filtered prediction and real position
         self.ln_diff = Line2D([], [], color='b')
+        # retrodicted position
+        self.ln_retro = Line2D([], [], color='m', marker='^', linewidth=0)
 
         # set up ax1
         self.ax1.set_xlim(-12000, 12000)
@@ -67,6 +69,7 @@ class Animation(object):
         ax1.add_line(self.ln_prediction)
         ax1.add_line(self.ln_meas)
         ax1.add_line(self.ln_fused)
+        ax1.add_line(self.ln_retro)
         # set up legend
         legend_lines = [self.ln_prediction, self.ln_meas, self.ln_fused]
         box = ax1.get_position()
@@ -194,7 +197,7 @@ class Animation(object):
     def init_plot(self):
         """Setting all initial values for the data plots"""
         lines = [self.ln_trace, self.ln_object, self.ln_vel, self.ln_acc, self.ln_vec_t, self.ln_vec_n,
-                 self.ln_prediction, self.ln_meas, self.ln_fused, self.ln_diff]
+                 self.ln_prediction, self.ln_meas, self.ln_fused, self.ln_diff, self.ln_retro]
         for l in lines:
             l.set_data([], [])
 
@@ -239,6 +242,12 @@ class Animation(object):
         # kalman plot difference between filtered prediction and real object position
         self.ln_diff.set_data(self.t[:i], self.diff_abs[:i])
 
+        # kalam retrodicted position
+        # calc for each instance i
+        if(i>10):
+            _x, p = self.kalman_filter.retrodiction(i-1, i, i-10)
+            self.ln_retro.set_data(_x[:, 0:1], _x[:, 1:2])
+
         # plot quiver for object
         q_tang = self.ax1.quiver(x, y, self.air.tang[0], self.air.tang[1], pivot='tail', color='black', width=0.004,
                                  angles='xy', scale=35)
@@ -247,7 +256,7 @@ class Animation(object):
                                  scale=35)
 
         artists = [self.ln_trace, self.ln_object, self.ln_vel, self.ln_acc, self.ln_vec_t, self.ln_vec_n,
-                   self.ln_prediction, self.ln_meas, self.ln_fused, self.ln_diff, q_norm, q_tang]
+                   self.ln_prediction, self.ln_meas, self.ln_fused, self.ln_diff, self.ln_retro, q_norm, q_tang]
 
         # plot quivers for each sensor
         for j, arg in enumerate(self.sensors):
