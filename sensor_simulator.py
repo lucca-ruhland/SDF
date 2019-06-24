@@ -1,10 +1,10 @@
 import numpy as np
-from aircraft import Aircraft
 
 
 class Sensor:
 
     def __init__(self, sigma_c, sigma_r, sigma_f, delta_t, pos, air):
+        """Initialize class variables"""
         # constants
         self.sigma_c = sigma_c
         self.sigma_r = sigma_r
@@ -66,28 +66,3 @@ class Sensor:
         self.z_c = self.cartesian(t)
         self.z_r = self.range(t)
         self.z_az = self.azimuth(t)
-
-
-def main():
-
-    aircraft = Aircraft(300, 9, 0)
-    # defining sensor position
-    sensor_pos = np.zeros((2, 1))
-    sensor_pos[0] = 0
-    sensor_pos[1] = 0
-    # create sensor object for test
-    sensor = Sensor(50, 20, 0.2, 5, sensor_pos, aircraft)
-
-    for i in range(10):
-        sensor.update_stats(i)
-        obj_pos = np.array([sensor.z_c]).reshape((2, 1))
-        r = sensor.z_r
-        az = sensor.z_az
-        z = r * np.array([np.cos(az), np.sin(az)]).reshape((2, 1)) + sensor_pos
-        print("object position: \n", obj_pos)
-        print("recalculated position:\n", z)
-        dif = obj_pos - z
-        print("Differences:\n", dif)
-
-if __name__ == "__main__":
-    main()

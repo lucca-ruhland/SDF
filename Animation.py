@@ -6,11 +6,12 @@ from matplotlib.lines import Line2D
 from kalman_filter import KalmanFilter
 import matplotlib.gridspec as gridspec
 from matplotlib.widgets import Button
+from random import randrange
 
 
 class Animation(object):
 
-    def __init__(self, ax1, ax2, ax3, ax4, ax5, air, *args):
+    def __init__(self, ax1, ax2, ax3, ax4, ax5, air, sensor_list, sen_num=6, delta_t=5):
         """Setting up all local variables and calculate plot data"""
         # set up objects
         self.ax1 = ax1
@@ -22,16 +23,12 @@ class Animation(object):
         # set aircraft object
         self.air = air
         # add kalman object
-        self.kalman_filter = KalmanFilter(air, 5, *args)
+        self.kalman_filter = KalmanFilter(air, 5, sensor_list)
 
         # variable number of sensors
-        self.sensors = args
-        self.sen_num = 0
-        self.delta_t = 0
-        for arg in args:
-            if isinstance(arg, Sensor):
-                self.delta_t = arg.delta_t
-                self.sen_num += 1
+        self.sensors = sensor_list
+        self.sen_num = sen_num
+        self.delta_t = delta_t
 
         # set up lines
         # object trace
@@ -62,6 +59,7 @@ class Animation(object):
         self.ax1.set_ylabel("x in meter")
         ax1.grid(True)
 
+        # add lines to ax1
         ax1.add_line(self.ln_trace)
         ax1.add_line(self.ln_object)
         ax1.add_line(self.ln_prediction)
@@ -130,6 +128,8 @@ class Animation(object):
         # prediction
         self.prediction_x = np.zeros(420)
         self.prediction_y = np.zeros(420)
+
+        # filtered prediction
         self.pred_filtered_x = np.zeros(420)
         self.pred_filtered_y = np.zeros(420)
 
@@ -150,7 +150,7 @@ class Animation(object):
                 self.polar_fused_y[i] = self.kalman_filter.z[1]
 
                 # get prediction after filtering
-                self.kalman_filter.update_polar(i)
+                #self.kalman_filter.update_polar(i)
                 self.pred_filtered_x[i] = self.kalman_filter.x[0]
                 self.pred_filtered_y[i] = self.kalman_filter.x[1]
 
@@ -162,7 +162,6 @@ class Animation(object):
                         self.polar_meas_x[j, i] = z[0]
                         self.polar_meas_y[j, i] = z[1]
 
-            # fill up array with existing values
             else:
                 # fill up filtered prediction
                 self.pred_filtered_x[i] = self.pred_filtered_x[i-1]
@@ -202,6 +201,7 @@ class Animation(object):
         self.air.update_stats(i)
         x = self.air.position[0]
         y = self.air.position[1]
+
         # update aircraft trajectory
         self.ln_trace.set_data(self.pos_x[:i], self.pos_y[:i])
         # update aircraft position
@@ -221,7 +221,7 @@ class Animation(object):
 
         # kalman plot prediction BEFORE filter
         # show last 5 predictions
-        if(i > 5):
+        if i > 5:
             self.ln_prediction.set_data(self.prediction_x[i-5:i], self.prediction_y[i-5:i])
 
         # kalman plot prediction AFTER filter
@@ -255,8 +255,9 @@ class Animation(object):
 
         return artists
 
+
 def pause(event):
-    '''Pause Animation on click'''
+    """Pause Animation on click"""
     global running
     if running:
         animation.event_source.stop()
@@ -266,22 +267,21 @@ def pause(event):
         running = True
 
 
+def create_sensor(num, delta, air):
+    """Creating Random Sensors with position -12,000 <= x, y <= 12000"""
+    sensors = []
+    for i in range(num):
+        x = randrange(-12000, 12000)
+        y = randrange(-12000, 12000)
+        pos = np.array([x, y]).reshape((2, 1))
+        sensors.append(Sensor(50, 20, 0.2, delta, pos, air))
+    return sensors
+
+
 if __name__ == "__main__":
-    # Testing Animation with Kalman Filter
-    T = 420
+    T = 420  # number of framess
     # set up objects
     air = Aircraft(300, 9, 0)
-    sensor_position = np.array((-11000, -11000)).reshape((2, 1))
-    sensor_position2 = np.array((-11000, 11000)).reshape((2, 1))
-    sensor_position3 = np.array((11000, -11000)).reshape((2, 1))
-    sensor_position4 = np.array((11000, 11000)).reshape((2, 1))
-    sensor_position5 = np.array((3000, -1500)).reshape((2, 1))
-    # setup sensors
-    sensor = Sensor(50, 20, 0.2, 5, sensor_position, air)
-    sensor2 = Sensor(50, 20, 0.2, 5, sensor_position2, air)
-    sensor3 = Sensor(50, 20, 0.2, 5, sensor_position3, air)
-    sensor4 = Sensor(50, 20, 0.2, 5, sensor_position4, air)
-    sensor5 = Sensor(50, 20, 0.2, 5, sensor_position5, air)
 
     # set up figure and subplots
     font = {'size': 9}
@@ -306,8 +306,14 @@ if __name__ == "__main__":
     pause_button = Button(pause_ax, 'pause', hovercolor='0.975')
     pause_button.on_clicked(pause)
 
+    delta_t = 5  # delta t of sensors
+    num = 6  # number of sensors
+    sensors = create_sensor(num, delta_t, air)
+    for s in sensors:
+        print(s.pos)
+
     # plot animation
-    ani = Animation(ax1, ax2, ax3, ax4, ax5, air, sensor, sensor2, sensor3, sensor4, sensor5)
+    ani = Animation(ax1, ax2, ax3, ax4, ax5, air, sensors)
     animation = FuncAnimation(fig, ani, frames=T, init_func=ani.init_plot, interval=100,  blit=True, repeat=True)
 
     plt.show()

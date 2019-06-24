@@ -1,12 +1,11 @@
 from sensor_simulator import Sensor
-from aircraft import Aircraft
 import numpy as np
 from numpy.linalg import inv
 
 
 class KalmanFilter:
 
-    def __init__(self, aircraft, sigma, *argv):
+    def __init__(self, aircraft, sigma, sensor_list):
         """Initialize local variables and measurement data for filter"""
         # initialize objects
         self.air = aircraft
@@ -14,7 +13,7 @@ class KalmanFilter:
         self.delta_t = 5
         self.sigma = sigma
         # save all sensors
-        self.sensors = argv
+        self.sensors = sensor_list
 
         # init local vars
         # state vector
@@ -24,7 +23,7 @@ class KalmanFilter:
         self.z_polar = np.zeros((2, 1))
         # Covariance P of pdf
         self.P = np.zeros((4, 4))
-        # covaricance R
+        # covariance R
         self.R = np.zeros((2, 2))
 
         # list of all state vectors x for retrodiction
@@ -66,7 +65,6 @@ class KalmanFilter:
         R = self.get_covariance_r_polar()
         return np.dot(np.dot(T, R), T.T)
 
-
     def get_h(self):
         """Returns matrix to transform state vector x to measurement dimension"""
         """Returns numpy array of dimension 2x4"""
@@ -105,37 +103,13 @@ class KalmanFilter:
         H = self.get_h()
         R = self.get_covariance_r()
         v = self.z - np.dot(H, self.x)
-        print("innovation v:\n", v)
 
         S = np.dot(np.dot(H, self.P), H.T) + R
-        S = S.astype(float) # to fix inv(S) for polar measurements
+        S = S.astype(float)  # to fix inv(S) for polar measurements
         W = np.dot(np.dot(self.P, H.T), inv(S))
         x = self.x + np.dot(W, v)
         P = self.P - np.dot(np.dot(W, S), W.T)
         return x, P
-
-    def retrodiction(self, l, k, limit=0):
-        """Returns dynamic model for a past time instances l with knowledge of time instance k"""
-        """expecting l + 1 = k"""
-        """Returns two numpy arrays of dimension 4xl (all l state vector x) and 4x4*l (all l covariance matrix P)"""
-        F = self.get_dynamics_f()
-        x = []
-        P = []
-        print("list_x.shape:\n", len(self.list_x))
-        print("list_p.shape:\n", len(self.list_p))
-        # init x_l|k and P_l|k
-        _w = np.dot(np.dot(self.list_p[2 * l], F.T), inv(self.list_p[2 * l + 1]))
-        _x = self.list_x[2 * l] + np.dot(_w, (self.list_x[l + 1 + k] - self.list_x[2 * l + 1]))
-        x.append(_x)
-        _p = self.list_p[2 * l] + np.dot(np.dot(_w, (self.list_p[l + 1 + k] - self.list_p[2 * l + 1])), _w.T)
-        P.append(_p)
-        for i in range(l-1, limit, -1):
-            _w = np.dot(np.dot(self.list_p[2 * i], F.T), inv(self.list_p[2 * i + 1]))
-            _x = self.list_x[2 * i] + np.dot(_w, (_x - self.list_x[2 * l + 1]))
-            x.append(_x)
-            _p = self.list_p[2 * l] + np.dot(np.dot(_w, (self.list_p[l + 1 + k] - self.list_p[2 * l + 1])), _w.T)
-            P.append(_p)
-        return np.array(x), np.array(P)
 
     def fusion(self, t):
         """Combine measurements of all sensors into a single measurement"""
@@ -149,7 +123,6 @@ class KalmanFilter:
                 _z = np.array([arg.z_c[0], arg.z_c[1]]).reshape(2, 1)
                 z = z + np.dot(inv(_r), _z)
         z = np.matmul(R, z)
-        print("fusion:\n", z)
         return z
 
     def fusion_polar(self, t):
@@ -184,45 +157,5 @@ class KalmanFilter:
         """Calculate Kalman Filter based on polar sensor measurements for time instance t"""
         """Updates class variables x(prediction), P(covariance), z(measurement) and R(covariance)"""
         self.x, self.P = self.prediction(t)
-        # add x and P to list for retrodiction
-        self.list_x.append(self.x)
-        self.list_p.append(self.P)
         self.z, self.R = self.fusion_polar(t)
-        print("measuremetn z AFTER FUSION:\n", self.z)
         self.x, self.P = self.filtering(t)
-        # add x and P to list for retrodiction
-        self.list_x.append(self.x)
-        self.list_p.append(self.P)
-        print("filtered prediction x:\n", self.x)
-
-    def update_polar_prediction(self, t):
-        self.x, self.P = self.prediction(t)
-
-
-if __name__ == "__main__":
-    # run tests for kalman filter
-    # init objects needed for kalman filter
-    air = Aircraft(300, 9, 0)
-    sensor_position = np.array((-8000, -4000)).reshape((2, 1))
-    sensor1 = Sensor(50, 20, 0.00349066, 5, sensor_position, air)
-    sensor_position2 = np.array((0, -12000)).reshape((2, 1))
-    sensor2 = Sensor(50, 20, 0.00349066, 5, sensor_position2, air)
-    sensor_position3 = np.array((12000, 8000)).reshape((2, 1))
-    sensor3 = Sensor(50, 20, 0.00349066, 5, sensor_position3, air)
-    sensor_position4 = np.array((-6000, 3000)).reshape((2, 1))
-    sensor4 = Sensor(50, 20, 0.00349066, 5, sensor_position4, air)
-    kalman_filter = KalmanFilter(air, 50, 5, sensor1, sensor2, sensor3, sensor4)
-
-    # print(kalman_filter.z)
-    for i in range(0, 420):
-        kalman_filter.update_polar(i)
-
-    x, p = kalman_filter.retrodiction(419, 420)
-    print("print out retrodiction\n=====================================================================\n")
-    for i in range(0, 420):
-        print("i:", i)
-        print(x[i])
-
-
-
-
