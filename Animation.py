@@ -18,7 +18,7 @@ class Animation(object):
         self.ax3 = ax3
         self.ax4 = ax4
         self.ax5 = ax5
-        #self.ax6 = ax6
+
         # set aircraft object
         self.air = air
         # add kalman object
@@ -53,11 +53,6 @@ class Animation(object):
         self.ln_vec_t = Line2D([], [], color='b')
         # vector products with r''(t) & n(t)
         self.ln_vec_n = Line2D([], [], color='b')
-        # difference between filtered prediction and real position
-        self.ln_diff = Line2D([], [], color='b')
-        # retrodicted position
-        self.ln_retro = Line2D([], [], color='k', marker='^', linewidth=0)
-
 
         # set up ax1
         self.ax1.set_xlim(-12000, 12000)
@@ -72,7 +67,6 @@ class Animation(object):
         ax1.add_line(self.ln_prediction)
         ax1.add_line(self.ln_meas)
         ax1.add_line(self.ln_fused)
-        ax1.add_line(self.ln_retro)
         ax1.add_line(self.ln_pred_filtered)
 
         # set up legend
@@ -121,15 +115,6 @@ class Animation(object):
         ax5.grid(True)
         ax5.add_line(self.ln_vec_n)
 
-        # set up ax6
-        #ax6.set_title("Difference between filtered prediction and real object position")
-        #self.ax6.set_xlabel("time in seconds")
-        #self.ax6.set_ylabel("distance in meter")
-        #ax6.grid(True)
-        #self.ax6.set_xlim(-10, 430)
-        #self.ax6.set_ylim(-10, 1000)
-        #ax6.add_line(self.ln_diff)
-
         # set up data for lines
         # time array
         self.t = np.arange(0, 420, 1)
@@ -156,10 +141,6 @@ class Animation(object):
         self.polar_fused_x = np.zeros(420)
         self.polar_fused_y = np.zeros(420)
 
-        # retrodictiom
-        self.retro_x = np.zeros(420)
-        self.retro_y = np.zeros(420)
-
         # calculate sensor data for each instance delta t
         for i in self.t:
             if i % self.delta_t == 0 or i == 0:
@@ -183,7 +164,6 @@ class Animation(object):
 
             # fill up array with existing values
             else:
-                #self.kalman_filter.update_polar_prediction(i)
                 # fill up filtered prediction
                 self.pred_filtered_x[i] = self.pred_filtered_x[i-1]
                 self.pred_filtered_y[i] = self.pred_filtered_y[i-1]
@@ -191,13 +171,6 @@ class Animation(object):
                 self.kalman_filter.x, self.kalman_filter.P = self.kalman_filter.prediction(i)
                 self.prediction_x[i] = self.kalman_filter.x[0]
                 self.prediction_y[i] = self.kalman_filter.x[1]
-
-                #self.prediction_x[i] = self.prediction_x[i-1]
-                #self.prediction_y[i] = self.prediction_y[i-1]
-                #_x, _p = self.kalman_filter.retrodiction(i, i-1, 0)
-                #self.retro_x = _x[:, 0:1]
-                #self.retro_y = _x[:, 0:1]
-
 
                 # fill up measurements of each sensor
                 for j, arg in enumerate(self.sensors):
@@ -210,17 +183,10 @@ class Animation(object):
         self.pos_x = np.array([self.air.get_position(i)[0] for i in self.t])
         self.pos_y = np.array([self.air.get_position(i)[1] for i in self.t])
 
-        # calculate difference
-        self.diff_x = np.array([self.pred_filtered_x[i] - self.pos_x[i] for i in self.t])
-        self.diff_y = np.array([self.pred_filtered_y[i] - self.pos_y[i] for i in self.t])
-        self.diff_abs = np.array([np.linalg.norm((self.diff_x[i], self.diff_y[i])) for i in self.t])
-        # set max y of ax6
-        #self.ax6.set_ylim(-10, np.amax(self.diff_abs) * 1.2)
-
     def init_plot(self):
         """Setting all initial values for the data plots"""
         lines = [self.ln_trace, self.ln_object, self.ln_vel, self.ln_acc, self.ln_vec_t, self.ln_vec_n,
-                 self.ln_prediction, self.ln_pred_filtered, self.ln_meas, self.ln_fused, self.ln_retro]
+                 self.ln_prediction, self.ln_pred_filtered, self.ln_meas, self.ln_fused]
         for l in lines:
             l.set_data([], [])
 
@@ -255,7 +221,8 @@ class Animation(object):
 
         # kalman plot prediction BEFORE filter
         # show last 5 predictions
-        self.ln_prediction.set_data(self.prediction_x[i-5:i], self.prediction_y[i-5:i])
+        if(i > 5):
+            self.ln_prediction.set_data(self.prediction_x[i-5:i], self.prediction_y[i-5:i])
 
         # kalman plot prediction AFTER filter
         self.ln_pred_filtered.set_data(self.pred_filtered_x[:i], self.pred_filtered_y[:i])
@@ -266,15 +233,6 @@ class Animation(object):
         # kalman plot fused measurement
         self.ln_fused.set_data(self.polar_fused_x[:i], self.polar_fused_y[:i])
 
-        # kalman plot difference between filtered prediction and real object position
-        #self.ln_diff.set_data(self.t[:i], self.diff_abs[:i])
-
-        # kalam retrodicted position
-        # calc for each instance i
-        #if(i>10):
-        #    _x, p = self.kalman_filter.retrodiction(i-1, i, i-10)
-        #    self.ln_retro.set_data(_x[:i, 0:1], _x[:i, 1:2])
-
         # plot quiver for object
         q_tang = self.ax1.quiver(x, y, self.air.tang[0], self.air.tang[1], pivot='tail', color='black', width=0.004,
                                  angles='xy', scale=35)
@@ -283,7 +241,7 @@ class Animation(object):
                                  scale=35)
 
         artists = [self.ln_trace, self.ln_object, self.ln_vel, self.ln_acc, self.ln_vec_t, self.ln_vec_n,
-                   self.ln_prediction, self.ln_pred_filtered, self.ln_meas, self.ln_fused, self.ln_retro, q_norm, q_tang]
+                   self.ln_prediction, self.ln_pred_filtered, self.ln_meas, self.ln_fused, q_norm, q_tang]
 
         # plot quivers for each sensor
         for j, arg in enumerate(self.sensors):
@@ -318,22 +276,12 @@ if __name__ == "__main__":
     sensor_position3 = np.array((11000, -11000)).reshape((2, 1))
     sensor_position4 = np.array((11000, 11000)).reshape((2, 1))
     sensor_position5 = np.array((3000, -1500)).reshape((2, 1))
-    # even more sensor test
-    # sensor_position5 = np.array((-1100, -11000)).reshape((2, 1))
-    # sensor_position6 = np.array((-4000, 7000)).reshape((2, 1))
-    # sensor_position7 = np.array((2000, -9000)).reshape((2, 1))
-    # sensor_position8 = np.array((100, 980)).reshape((2, 1))
-    # o.2 grad is 0.00349066 radiant
+    # setup sensors
     sensor = Sensor(50, 20, 0.2, 5, sensor_position, air)
     sensor2 = Sensor(50, 20, 0.2, 5, sensor_position2, air)
     sensor3 = Sensor(50, 20, 0.2, 5, sensor_position3, air)
     sensor4 = Sensor(50, 20, 0.2, 5, sensor_position4, air)
     sensor5 = Sensor(50, 20, 0.2, 5, sensor_position5, air)
-
-    # sensor5 = Sensor(50, 20, 0.00349066, 5, sensor_position5, air)
-    # sensor6 = Sensor(50, 20, 0.00349066, 5, sensor_position6, air)
-    # sensor7 = Sensor(50, 20, 0.00349066, 5, sensor_position7, air)
-    # sensor8 = Sensor(50, 20, 0.00349066, 5, sensor_position8, air)
 
     # set up figure and subplots
     font = {'size': 9}
@@ -343,7 +291,6 @@ if __name__ == "__main__":
     gs1 = gridspec.GridSpec(3, 3)
     gs1.update(left=0.05, right=0.48, wspace=0.05)
     ax1 = plt.subplot(gs1[:3, :])
-    #ax6 = plt.subplot(gs1[2, :])
 
     gs2 = gridspec.GridSpec(3, 3)
     gs2.update(left=0.55, right=0.98, hspace=0.5)
@@ -354,17 +301,13 @@ if __name__ == "__main__":
 
     # animation running?
     running = True
-    #add pause button
+    # add pause button
     pause_ax = fig.add_axes((0.7, 0.025, 0.1, 0.04))
     pause_button = Button(pause_ax, 'pause', hovercolor='0.975')
     pause_button.on_clicked(pause)
 
     # plot animation
     ani = Animation(ax1, ax2, ax3, ax4, ax5, air, sensor, sensor2, sensor3, sensor4, sensor5)
-    animation = FuncAnimation(fig, ani, frames=T, init_func=ani.init_plot, interval=60,  blit=True, repeat=True)
+    animation = FuncAnimation(fig, ani, frames=T, init_func=ani.init_plot, interval=100,  blit=True, repeat=True)
 
-    # plt.tight_layout()
-    plt.show()
-
-    plt.plot(ani.t, ani.diff_abs)
     plt.show()
