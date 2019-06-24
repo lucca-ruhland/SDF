@@ -150,7 +150,7 @@ class Animation(object):
                 self.polar_fused_y[i] = self.kalman_filter.z[1]
 
                 # get prediction after filtering
-                #self.kalman_filter.update_polar(i)
+                # self.kalman_filter.update_polar(i)
                 self.pred_filtered_x[i] = self.kalman_filter.x[0]
                 self.pred_filtered_y[i] = self.kalman_filter.x[1]
 

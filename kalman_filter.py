@@ -22,7 +22,7 @@ class KalmanFilter:
         self.z = np.zeros((2, 1))
         self.z_polar = np.zeros((2, 1))
         # Covariance P of pdf
-        self.P = np.zeros((4, 4))
+        self.P = 1000 * np.eye(4)  # init P very large
         # covariance R
         self.R = np.zeros((2, 2))
 
@@ -89,7 +89,7 @@ class KalmanFilter:
     def prediction(self, t):
         """Returns a prediction based on a dynamic model of sensor measurements"""
         """Returns two numpy arrays of dimension 4x1 (matrix x) and 4x4 (matrix P)"""
-        self.air.update_stats(t)
+        #self.air.update_stats(t)
         x = self.x
         F = self.get_dynamics_f()
         D = self.get_covariance_d()
