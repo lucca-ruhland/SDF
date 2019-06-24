@@ -195,6 +195,9 @@ class KalmanFilter:
         self.list_p.append(self.P)
         print("filtered prediction x:\n", self.x)
 
+    def update_polar_prediction(self, t):
+        self.x, self.P = self.prediction(t)
+
 
 if __name__ == "__main__":
     # run tests for kalman filter
