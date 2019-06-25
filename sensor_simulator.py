@@ -1,4 +1,5 @@
 import numpy as np
+from aircraft import Aircraft
 
 
 class Sensor:
@@ -36,7 +37,7 @@ class Sensor:
 
     def cartesian(self, t):
         """Returns the cartesian measurements of the aircraft for time instanct t"""
-        self.update_x(t)
+        # self.update_x(t)
         u = self.get_u(self.sigma_c, self.sigma_c)
         z = self.x_pos + u
         # test prints
@@ -46,18 +47,18 @@ class Sensor:
 
     def range(self, t):
         """returns the range between sensor and aircraft for time instant t"""
-        self.update_x(t)
+        # self.update_x(t)
         u = self.get_u(self.sigma_r, self.sigma_f)[0]
-        z = np.array([np.sqrt((self.x_pos[0] - self.pos[0])**2 + (self.x_pos[1] - self.pos[1])**2)])
-        z = z + u
+        z = np.sqrt((self.x_pos[0] - self.pos[0])**2 + (self.x_pos[1] - self.pos[1])**2)
+        z = z + self.sigma_r * np.random.normal(0, 1)
         return z
 
     def azimuth(self, t):
         """returns the azimuth of the aircraft towards the sensor for time instant t"""
-        self.update_x(t)
+        # self.update_x(t)
         u = self.get_u(self.sigma_r, self.sigma_f)[1]
-        z = np.array([np.arctan2((self.x_pos[1] - self.pos[1]), (self.x_pos[0] - self.pos[0]))])
-        z = z + u
+        z = np.arctan2((self.x_pos[1] - self.pos[1]), (self.x_pos[0] - self.pos[0]))
+        z = z + self.sigma_f * np.random.normal(0, 1)
         return z
 
     def update_stats(self, t):
@@ -66,3 +67,11 @@ class Sensor:
         self.z_c = self.cartesian(t)
         self.z_r = self.range(t)
         self.z_az = self.azimuth(t)
+
+
+if __name__ == "__main__":
+    air = Aircraft(300, 9, 0)
+    s = Sensor(50, 20, 0.2, 5, np.array([1000, 20]).reshape((2, 1)), air)
+    s.update_stats(200)
+    print("range:\n", s.z_r)
+    print("azimuth:\n", s.z_az)

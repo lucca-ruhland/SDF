@@ -84,7 +84,8 @@ class KalmanFilter:
         """Returns an initialized state vector for beginning e.g. x0|0"""
         """Returns numpy array of dimension 4x1"""
         self.air.update_stats(t)
-        return np.array([self.air.position[0], self.air.position[1], self.air.velocity[0], self.air.velocity[1]]).reshape((4, 1))
+        return np.array([self.air.position[0], self.air.position[1],
+                         self.air.velocity[0], self.air.velocity[1]]).reshape((4, 1))
 
     def prediction(self, t):
         """Returns a prediction based on a dynamic model of sensor measurements"""
