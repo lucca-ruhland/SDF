@@ -9,22 +9,21 @@ class KalmanFilter:
         """Initialize local variables and measurement data for filter"""
         # initialize objects
         self.air = aircraft
-        # init sensors
-        self.delta_t = 5
-        self.sigma = sigma
         # save all sensors
         self.sensors = sensor_list
 
         # init local vars
         # state vector
-        # self.x = np.zeros((4, 1))
         self.x = self.init_state_vecor(0)
+        # measurement z
         self.z = np.zeros((2, 1))
-        self.z_polar = np.zeros((2, 1))
         # Covariance P of pdf
         self.P = 1000 * np.eye(4)  # init P very large
         # covariance R
         self.R = np.zeros((2, 2))
+        # sensor constants
+        self.delta_t = 5
+        self.sigma = sigma
 
     def init_state_vecor(self, t):
         """Returns an initialized state vector for beginning e.g. x0|0"""
@@ -87,7 +86,7 @@ class KalmanFilter:
         return z, R
 
     def update_polar(self, t):
-        """Calculate Kalman Filter based on polar sensor measurements for time instance t"""
+        """Update Kalman Filter (prediction, fusion, filtering) for time instance t"""
         """Updates class variables x(prediction), P(covariance), z(measurement) and R(covariance)"""
         self.x, self.P = self.prediction(t)
         self.z, self.R = self.fusion_polar(t)

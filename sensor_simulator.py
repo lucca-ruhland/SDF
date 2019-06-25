@@ -1,19 +1,18 @@
 import numpy as np
-from aircraft import Aircraft
 
 
 class Sensor:
 
     def __init__(self, sigma_c, sigma_r, sigma_f, delta_t, pos, air):
         """Initialize class variables"""
+        # objects
+        self.air = air
         # constants
         self.sigma_c = sigma_c
         self.sigma_r = sigma_r
         self.sigma_f = sigma_f
         self.delta_t = delta_t
         self.pos = pos
-        # objects
-        self.air = air
         # simulated measurements
         self.z_c = np.zeros(2)
         self.z_r = np.zeros(2)
@@ -23,7 +22,7 @@ class Sensor:
         self.x_v = np.zeros(2)
         self.x_q = np.zeros(2)
 
-    def update_x(self, t):
+    def update_real_values(self, t):
         """Updates for given time instant t all aircraft components"""
         self.air.update_stats(t)
         self.x_pos = self.air.position
@@ -63,15 +62,7 @@ class Sensor:
 
     def update_stats(self, t):
         """Updates all measurements of sensor for given time instant t"""
-        self.update_x(t)
+        self.update_real_values(t)
         self.z_c = self.cartesian(t)
         self.z_r = self.range(t)
         self.z_az = self.azimuth(t)
-
-
-if __name__ == "__main__":
-    air = Aircraft(300, 9, 0)
-    s = Sensor(50, 20, 0.2, 5, np.array([1000, 20]).reshape((2, 1)), air)
-    s.update_stats(200)
-    print("range:\n", s.z_r)
-    print("azimuth:\n", s.z_az)
