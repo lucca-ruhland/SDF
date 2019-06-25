@@ -222,7 +222,7 @@ class Animation(object):
         # kalman plot prediction BEFORE filter
         # show last 5 predictions
         if i > 5:
-            self.ln_prediction.set_data(self.prediction_x[i-5:i], self.prediction_y[i-5:i])
+            self.ln_prediction.set_data(self.prediction_x[i-4:i+1], self.prediction_y[i-4:i+1])
 
         # kalman plot prediction AFTER filter
         self.ln_pred_filtered.set_data(self.pred_filtered_x[:i], self.pred_filtered_y[:i])
@@ -231,8 +231,8 @@ class Animation(object):
         self.ln_meas.set_data(self.polar_meas_x[:, :i], self.polar_meas_y[:, :i])
 
         # kalman plot fused measurement
-        if i > 5:
-            self.ln_fused.set_data(self.polar_fused_x[i-5:i+1], self.polar_fused_y[i-5:i+1])
+        if i > 50:
+            self.ln_fused.set_data(self.polar_fused_x[i-49:i+1], self.polar_fused_y[i-49:i+1])
 
         # plot quiver for object
         q_tang = self.ax1.quiver(x, y, self.air.tang[0], self.air.tang[1], pivot='tail', color='black', width=0.004,
